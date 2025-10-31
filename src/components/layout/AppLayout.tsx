@@ -1,25 +1,20 @@
-// AppLayout.tsx
 import { Outlet } from 'react-router-dom';
-import { Sidebar, SidebarProvider, SidebarTrigger } from '../ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { AppSidebar } from './AppSidebar';
 import NavBar from './Navbar';
-
-const AppLayout = () => {
+const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   return (
-    <div className="flex h-screen w-full">
-     <SidebarProvider>
-      <Sidebar />
-      <main>
-        <SidebarTrigger />
-         <div className="flex flex-col">
-        <NavBar />
-        <main className="overflow-y-auto p-4 bg-gray-100">
-          <Outlet />
-        </main>
+    <SidebarProvider>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1">
+          <NavBar />
+          <main className="overflow-y-auto p-4">
+            {children ? children : <Outlet />}
+          </main>
+        </div>
       </div>
-      </main>
     </SidebarProvider>
-     
-    </div>
   );
 };
 
