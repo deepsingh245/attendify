@@ -1,4 +1,5 @@
 import React from "react";
+import { useLocation } from 'react-router-dom';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,13 +10,15 @@ import {
 } from "@/components/ui/breadcrumb";
 
 const Breadcrumps = () => {
-  const { pathname } = window.location;
+  const location = useLocation();
+  const { pathname } = location;
+  // recompute breadcrumbs whenever the location changes
   const segments = pathname
     .split("/")
     .filter((seg) => seg !== "dashboard" && seg !== "");
 
   return (
-    <div className="w-full px-4 py-2  h-[50px] flex items-center gap-4 ">
+    <div className="w-fit px-4 py-2  h-[50px] flex items-center gap-4 ">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

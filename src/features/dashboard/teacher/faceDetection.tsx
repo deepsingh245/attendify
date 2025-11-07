@@ -9,6 +9,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import GlobalLoader from "@/components/ui/global-loader";
 import { BUCKET_URL } from "@/constants/constants";
+import {
+  loadModels,
+  loadLabeledDescriptors,
+  createFaceMatcher,
+  detectAllFacesFromImage,
+  bufferToImage,
+} from "@/services/face-api.service";
 // import { supabase } from "@/firebase/supabase.utils";
 
 
@@ -27,45 +34,7 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
   const labeledMapRef = useRef<Map<string, string> | null>(null);
 
 
-  const loadLabeledImages = useCallback(async (): Promise<
-    faceapi.LabeledFaceDescriptors[]
-  > => {
-    try {
-      const labeledFaces = studentsList.map((student, i) => {
-        return {
-          label: student.name,
-          url: `${BUCKET_URL}${student.id}/face${i + 1}.jpg`,
-          id: student.id,
-        };
-      });
-
-      // build label -> id map for quick lookup after recognition
-      labeledMapRef.current = new Map(labeledFaces.map((f) => [f.label, f.id]));
-
-      const descriptors: faceapi.LabeledFaceDescriptors[] = await Promise.all(
-        labeledFaces.map(async (face) => {
-          const descriptions: Float32Array[] = [];
-          try {
-            const img = await faceapi.fetchImage(face.url);
-            const detection = await faceapi
-              .detectSingleFace(img)
-              .withFaceLandmarks()
-              .withFaceDescriptor();
-            if (detection) descriptions.push(detection.descriptor);
-          } catch (e) {
-            console.warn("Error processing image", face.label, e);
-          }
-
-          return new faceapi.LabeledFaceDescriptors(face.label, descriptions);
-        })
-      );
-
-      return descriptors;
-    } catch (err) {
-      console.error("loadLabeledImages error", err);
-      return [];
-    }
-  }, [studentsList]);
+  // loadLabeledDescriptors handled in service
 
   const [globalLoading, setGlobalLoading] = useState(false);
 
@@ -76,15 +45,12 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
     if (modelsLoadedRef.current) return;
     try {
       setLoading(true);
-      await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
-        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-        faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-      ]);
-
-      const labeled = await loadLabeledImages();
-      labeledDescriptorsRef.current = labeled;
-      faceMatcherRef.current = new faceapi.FaceMatcher(labeled || [], 0.6);
+      // use service to load models and labeled descriptors
+      await loadModels('/models');
+      const { descriptors, labelMap } = await loadLabeledDescriptors(studentsList, BUCKET_URL);
+      labeledDescriptorsRef.current = descriptors;
+      labeledMapRef.current = labelMap;
+      faceMatcherRef.current = createFaceMatcher(descriptors, 0.6);
 
       modelsLoadedRef.current = true;
     } catch (err) {
@@ -93,7 +59,7 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
     } finally {
       setLoading(false);
     }
-  }, [loadLabeledImages]);
+  }, [studentsList]);
 
   
 
@@ -116,8 +82,8 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
     const scaleX = imgEl.width / (imgEl.naturalWidth || imgEl.width);
     const scaleY = imgEl.height / (imgEl.naturalHeight || imgEl.height);
 
-  const names: string[] = [];
-  const ids: string[] = [];
+    const names: string[] = [];
+    const ids: string[] = [];
 
     detections.forEach((d) => {
       const best = faceMatcherRef.current?.findBestMatch(d.descriptor) ?? { label: 'unknown' };
@@ -167,7 +133,7 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
       // Lazy-load models & descriptors on first upload
       await ensureModelsLoaded();
 
-      const img = await faceapi.bufferToImage(file as Blob);
+  const img = await bufferToImage(file as Blob);
       // set image src via state so the <img> is rendered with src and the ref is attached
       setImageSrc(img.src);
 
@@ -202,7 +168,7 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
         tryAttach();
       });
 
-      const detectionsRaw = await faceapi.detectAllFaces(imageRef.current as HTMLImageElement).withFaceLandmarks().withFaceDescriptors();
+  const detectionsRaw = await detectAllFacesFromImage(imageRef.current as HTMLImageElement);
       // detectionsRaw comes from face-api; assert to our simplified type for drawing
       drawDetections(detectionsRaw as unknown as DetectionWithDescriptor[]);
       // drawDetections calls setDetectedNames synchronously, hide overlay after names are set
@@ -213,6 +179,7 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
       setError(String((err as Error)?.message ?? String(err)));
     }
   }, [drawDetections, ensureModelsLoaded]);
+
 
   return (
     <Card className="p-6 space-y-4">
@@ -237,13 +204,15 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
         <div className="md:col-span-1">
           <Label htmlFor="face-file" className="mb-2">Upload image</Label>
-          <Input id="face-file" type="file" accept="image/*" onChange={handleUpload} disabled={loading} />
+          <Input id="face-file" type="file" accept="image/*" onChange={handleUpload} disabled={loading} className="cursor-pointer" />
           <div className="mt-3 flex gap-2">
             <Button onClick={async () => {
-              // reload descriptors on demand
+              // reload descriptors on demand using service
               setLoading(true);
-              labeledDescriptorsRef.current = await loadLabeledImages();
-              faceMatcherRef.current = new faceapi.FaceMatcher(labeledDescriptorsRef.current || [], 0.6);
+              const { descriptors, labelMap } = await loadLabeledDescriptors(studentsList, BUCKET_URL);
+              labeledDescriptorsRef.current = descriptors;
+              labeledMapRef.current = labelMap;
+              faceMatcherRef.current = createFaceMatcher(descriptors, 0.6);
               setLoading(false);
             }} disabled={loading}>Refresh Labels</Button>
           </div>

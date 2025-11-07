@@ -4,9 +4,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardHeader } from '@/components/ui/card';
 import { teachersData } from './teachersData';
-// import { addCollection, setDocument } from '@/firebase/firebaseUtils';
-// import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { addDocument, updateDocument} from '@/firebase/firebaseUtils';
+import { Button } from '@/components/ui/button';
+import { Collections } from '@/constants/constants';
 
 // Dashboard class shape used by this component
 type TeacherDashboardClass = {
@@ -31,7 +32,7 @@ const TeacherOverView = () => {
 
       const teacherClasses = allClasses.filter((c) => c.teacherId === teacherId);
 
-      const dashboardClasses: TeacherDashboardClass[] = teacherClasses.map((c) => {
+      const dashboardClasses = teacherClasses.map((c) => {
         const studentsInClass = allStudents.filter((s) => s.classId === c.id);
 
         // compute attendance on the latest date available across these students
@@ -52,29 +53,32 @@ const TeacherOverView = () => {
         return {
           id: c.id,
           name: c.className || 'Class',
-          completed: c.status === 'Completed',
-          status: c.status || 'Ongoing',
+          // completed: c.status === 'Completed',
+          // status: c.status || 'Ongoing',
           attendance: attendancePercent,
           studentCount: studentsInClass.length,
         };
       });
 
-      setClasses(dashboardClasses);
+      setClasses(dashboardClasses as TeacherDashboardClass[]);
     }
 
     compute();
   }, []);
 
-  // const setDocTeach = async() => {
-  //   await setDocument('attendance', 'C102', teachersData.attendance[ 'C102' ]);
-  //   // await addCollection('classes', teachersData.classes[0]);
-  //   console.log('Document Set');
+
+  const setDocTeach = async() => {
+    // for(const record of teachersData.teachers) {
+      updateDocument(Collections.TEACHERS, 'evZsz5wKWlh8mkIJUtTZEftrCBj2', teachersData.teachers[1]);
   // }
+    // await addCollection('classes', teachersData.classes[0]);
+    console.log('Document Set');
+  }
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Teacher Overview</h1>
       <div className="mb-6">Summary of your classes and today's attendance.</div>
-      {/* <Button onClick={setDocTeach}>set Teacher Data</Button> */}
+      <Button onClick={setDocTeach}>set Teacher Data</Button>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {classes.map((cls) => (
           <button key={cls.id} onClick={() => navigate(`/teacher/class/${cls.id}`)}>

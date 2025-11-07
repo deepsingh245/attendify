@@ -5,4 +5,11 @@ export const Collections = {
   STUDENTS: "students",
   CLASSES: "classes",
   ATTENDANCE: "attendance",
+  ADMINS: "admins",
+};
+
+export const AttendanceStatus = {
+    PRESENT: 'Present',
+    ABSENT: 'Absent',
+    LEAVE: 'Leave',
 };

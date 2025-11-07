@@ -1,48 +1,42 @@
 import { Collections } from "@/constants/constants";
-import { getCollection, getDocument, queryCollection, updateDocument } from "./firebaseUtils";
+import { getCollection, getDocument, queryCollection } from "./firebaseUtils";
+import { Student } from "./interfaces/user.interface";
 
+// Helper to safely retrieve document data with error handling
+export const safeGetDocumentData = async <T>(collectionName: string, docId: string): Promise<T | null> => {
+  try {
+    const doc = await getDocument(collectionName, docId);
+    return doc.data() as T | null; // Dynamically return the type T
+  } catch (error) {
+    console.error(`Error fetching document ${docId} from ${collectionName}:`, error);
+    throw new Error(`Failed to get document ${docId}`);
+  }
+};
 
+// Get a single student by ID (using the generic function)
+export const getStudentById = async (studentId: string): Promise<Student | null> => {
+  const studentData = await safeGetDocumentData<Student>(Collections.STUDENTS, studentId);
+  return studentData ?? null; // Return null if no student is found
+};
 
-export const getStudentById = async (studentId: string) => {
-  const studentDoc = await getDocument(Collections.STUDENTS, studentId);
-  return studentDoc.data();
-}
+// Get all students
+export const getAllStudents = async (): Promise<Student[]> => {
+  try {
+    const studentsCollection = await getCollection(Collections.STUDENTS);
+    return studentsCollection.docs.map(doc => doc.data() as Student);
+  } catch (error) {
+    console.error("Error fetching all students:", error);
+    return [];
+  }
+};
 
-export const getAllStudents = async () => {
-  const studentsCollection = await getCollection(Collections.STUDENTS);
-  return studentsCollection.docs.map(doc => doc.data());
-}
-
-export const getStudentsInClass = async (classId: string) => {
-  const allStudents = await queryCollection(Collections.STUDENTS, 'classId', classId);
-  return allStudents.docs.map(doc => doc.data());
-}
-
-export const getAttendanceForStudent = async (studentId: string) => {
-  const studentDoc = await getDocument(Collections.ATTENDANCE, studentId);
-  const studentData = studentDoc.data();
-  return studentData || [];
-}
-
-export const getAttendanceForClassOnDate = async (classId: string, date: string) => {
-  const studentsInClass = await getStudentsInClass(classId);
-  return Promise.all(studentsInClass.map(student => getAttendanceForStudentOnDate(student.id, date)));
-}
-
-export const getAttendanceForStudentOnDate = async (studentId: string, date: string) => {
-  const attendanceRecords = await getAttendanceForStudent(studentId);
-  return attendanceRecords.find((record: { date: string }) => record.date === date);
-}
-
-export const markAttendanceForStudent = async (studentId: string, date: string, status: 'Present' | 'Absent') => {
-  const studentDoc = await getDocument(Collections.STUDENTS, studentId);
-  const studentData = studentDoc.data();
-    const updatedAttendance = [...(studentData?.attendance || [])];
-    const recordIndex = updatedAttendance.findIndex((record: { date: string }) => record.date === date);
-    if (recordIndex >= 0) {
-      updatedAttendance[recordIndex].status = status;
-    } else {
-      updatedAttendance.push({ date, status });
-    }
-    await updateDocument(Collections.STUDENTS, studentId, { ...studentData, attendance: updatedAttendance });
-}
+// Get all students in a class
+export const getStudentsInClass = async (classId: string): Promise<Student[]> => {
+  try {
+    const allStudents = await queryCollection(Collections.STUDENTS, "classId", classId);
+    return allStudents.docs.map(doc => doc.data() as Student);
+  } catch (error) {
+    console.error(`Error fetching students for class ${classId}:`, error);
+    return [];
+  }
+};

@@ -18,6 +18,12 @@ import {
   deleteDoc,
   query,
   where,
+  QueryConstraint,
+  WhereFilterOp,
+  orderBy,
+  limit,
+  Firestore,
+  writeBatch,
 } from 'firebase/firestore';
 
 
@@ -53,6 +59,10 @@ export async function logout() {
 
 // Firestore functions
 export async function addCollection(collectionName: string, data: any) {
+  return addDoc(collection(db, collectionName), data);
+}
+
+export const addDocument = async (collectionName: string, data: any) => {
   return addDoc(collection(db, collectionName), data);
 }
 
@@ -102,7 +112,90 @@ export async function deleteSubDocument(parentCollection: string, parentId: stri
 }
 
 // Query example
-export async function queryCollection(collectionName: string, field: string, value: any) {
-  const q = query(collection(db, collectionName), where(field, '==', value));
+export async function queryCollection(collectionName: string, field: string, value: any, op: WhereFilterOp = '==') {
+  const q = query(collection(db, collectionName), where(field, op, value));
   return getDocs(q);
 }
+
+/**
+ * Build a Firestore query dynamically with multiple filters, ordering, and limits.
+ *
+ * @param collectionName - The Firestore collection name
+ * @param filters - An array of filter objects: [{ field, op, value }]
+ * @param order - Optional ordering: { field, direction }
+ * @param limitCount - Optional limit number
+ * @returns A Firestore query object
+ */
+export const buildQuery = (
+  collectionName: string,
+  filters: { field: string; op: WhereFilterOp; value: any }[] = [],
+  order?: { field: string; direction?: "asc" | "desc" },
+  limitCount?: number
+) => {
+  const constraints: QueryConstraint[] = [];
+
+  // Apply filters
+  filters.forEach(({ field, op, value }) => {
+    constraints.push(where(field, op, value));
+  });
+
+  // Apply ordering if provided
+  if (order) {
+    constraints.push(orderBy(order.field, order.direction || "asc"));
+  }
+
+  // Apply limit if provided
+  if (limitCount) {
+    constraints.push(limit(limitCount));
+  }
+
+  // Build and return query
+  return query(collection(db, collectionName), ...constraints);
+};
+
+
+
+/**
+ * Generic Firestore batch writer
+ *
+ * @param db - Firestore instance
+ * @param collectionName - Name of the Firestore collection
+ * @param operations - Array of operations to perform
+ * @param options - Optional config
+ */
+export const batchWrite = async <T>(
+  collectionName: string,
+  operations: Array<{
+    id?: string;              // Optional document ID (if omitted, Firestore auto-generates one)
+    data?: T;                 // Document data (required for 'set' and 'update')
+    type: "set" | "update" | "delete";
+  }>,
+  options?: { merge?: boolean } // Merge mode for set operations
+): Promise<void> => {
+  const batch = writeBatch(db);
+  const collectionRef = collection(db, collectionName);
+
+  for (const op of operations) {
+    const docRef = op.id ? doc(collectionRef, op.id) : doc(collectionRef);
+
+    switch (op.type) {
+      case "set":
+        if (!op.data) throw new Error("Missing data for set operation");
+        batch.set(docRef, op.data, { merge: options?.merge ?? false });
+        break;
+      case "update":
+        if (!op.data || !op.id) throw new Error("Missing data or id for update operation");
+        batch.update(docRef, op.data);
+        break;
+      case "delete":
+        if (!op.id) throw new Error("Missing id for delete operation");
+        batch.delete(docRef);
+        break;
+      default:
+        throw new Error(`Unsupported operation type: ${op.type}`);
+    }
+  }
+
+  await batch.commit();
+  console.log(`✅ Batch committed successfully with ${operations.length} operations.`);
+};

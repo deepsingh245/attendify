@@ -5,8 +5,10 @@
 // ===========================
 
 export interface AttendanceRecord {
+    studentId: string;
     date: string;                // e.g. "2025-10-27"
-    status: 'Present' | 'Absent';
+    status: 'Present' | 'Absent' | 'Leave';
+    classId: string;
 }
 
 // ===========================
@@ -16,11 +18,14 @@ export interface Teacher {
     id: string;
     userName: string;
     email: string;
-    password: string;
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
     role: 'teacher';
-    classes: string[];           // Array of class IDs managed by the teacher
+    classes: {
+        id: string;
+        isAttendanceMarkedForToday: boolean;
+        completed: boolean;
+    }[];           // Array of class IDs managed by the teacher
     profilePictureUrl?: string;
     lastLogin?: string;
     isActive: boolean;
@@ -31,9 +36,6 @@ export interface Teacher {
 
     // Attendance system–specific
     subject: string;
-    classesAssigned: string[];   // Same as `classes`, kept for clarity
-    classesCompleted: string[];
-    classesPending: string[];
 
     [key: string]: any;
 }
@@ -45,7 +47,6 @@ export interface Student {
     id: string;
     userName: string;
     email: string;
-    password: string;
     createdAt: string;
     updatedAt: string;
     role: 'student';
@@ -70,16 +71,14 @@ export interface Student {
 // ===========================
 export interface Class {
     id: string;
-    className: string;           // e.g. "Grade 8 - A"
-    teacherId: string;           // Reference to Teacher.id
-    students: string[];          // Array of Student IDs
-    status: 'Completed' | 'Ongoing';
+    className: string;
+    teacherId: string;
+    students: string[];
 }
 export interface Admin {
     id: string;
     userName: string;
     email: string;
-    password: string;
     createdAt: string;
     updatedAt: string;
     role: 'admin';
