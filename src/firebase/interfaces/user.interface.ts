@@ -36,7 +36,6 @@ export interface Teacher {
 
     // Attendance system–specific
     subject: string;
-
     [key: string]: any;
 }
 
@@ -81,6 +80,24 @@ export interface Admin {
     email: string;
     createdAt: string;
     updatedAt: string;
+    role: 'admin';
+    profilePictureUrl?: string;
+    lastLogin?: string;
+    isActive: boolean;
+    settings?: {
+        theme: 'light' | 'dark';
+        notifications: boolean;
+    };
+    [key: string]: any;
+}
+
+
+export interface Admins {
+    id: string;
+    userName: string;
+    email: string;
+    createdAt?: string;
+    updatedAt?: string;
     role: 'admin';
     profilePictureUrl?: string;
     lastLogin?: string;

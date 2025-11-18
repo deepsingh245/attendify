@@ -68,10 +68,10 @@ const TeacherOverView = () => {
 
 
   const setDocTeach = async() => {
-    // for(const record of teachersData.teachers) {
-      updateDocument(Collections.TEACHERS, 'evZsz5wKWlh8mkIJUtTZEftrCBj2', teachersData.teachers[1]);
+  //   for(const record of teachersData.teachers) {
+  //     addDocument(Collections.ADMINS, teachersData.admins[0]);
   // }
-    // await addCollection('classes', teachersData.classes[0]);
+    await updateDocument(Collections.CLASSES,'C101', teachersData.classes[0]);
     console.log('Document Set');
   }
   return (

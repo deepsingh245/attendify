@@ -22,8 +22,9 @@ import {
   WhereFilterOp,
   orderBy,
   limit,
-  Firestore,
   writeBatch,
+  WithFieldValue,
+  DocumentData,
 } from 'firebase/firestore';
 
 
@@ -58,16 +59,16 @@ export async function logout() {
 }
 
 // Firestore functions
-export async function addCollection(collectionName: string, data: any) {
-  return addDoc(collection(db, collectionName), data);
+export const addCollection = async <T>(collectionName: string, data: T) => {
+  return addDoc(collection(db, collectionName), data as WithFieldValue<DocumentData>);
 }
 
-export const addDocument = async (collectionName: string, data: any) => {
-  return addDoc(collection(db, collectionName), data);
+export const addDocument = async <T>(collectionName: string, data: T) => {
+  return addDoc(collection(db, collectionName), data as WithFieldValue<DocumentData>);
 }
 
-export async function setDocument(collectionName: string, docId: string, data: any) {
-  return setDoc(doc(db, collectionName, docId), data);
+export async function setDocument<T>(collectionName: string, docId: string, data: T) {
+  return setDoc(doc(db, collectionName, docId), data as WithFieldValue<DocumentData>);
 }
 
 export async function getDocument(collectionName: string, docId: string) {
@@ -78,8 +79,8 @@ export async function getCollection(collectionName: string) {
   return getDocs(collection(db, collectionName));
 }
 
-export async function updateDocument(collectionName: string, docId: string, data: any) {
-  return updateDoc(doc(db, collectionName, docId), data);
+export async function updateDocument<T>(collectionName: string, docId: string, data: T) {
+  return updateDoc(doc(db, collectionName, docId), data as WithFieldValue<DocumentData>);
 }
 
 export async function deleteDocument(collectionName: string, docId: string) {

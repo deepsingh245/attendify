@@ -8,7 +8,7 @@ const PrivateRoute = ({
   allowedRoles,
   resolving,
 }: {
-  user?: Student | Admin | Teacher | null;
+  user: Student | Admin | Teacher | null;
   allowedRoles: string[];
   resolving?: boolean;
 }) => {

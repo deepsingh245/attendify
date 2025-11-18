@@ -1,12 +1,29 @@
-import { Class, Student, Teacher } from "@/firebase/interfaces/user.interface";
+import { Admins, Student, Teacher } from "@/firebase/interfaces/user.interface";
 
-
+// Sample data used by the demo UI. The shapes here are looser than the canonical
+// Firestore types because we include extra demo-only fields (subjects, subjectCode,
+// and human-readable date strings) useful for UI prototypes.
 export const teachersData: {
+  admins: Admins[];
   teachers: Teacher[];
-  classes: Class[];
+  // classes in this demo include a subjects array with a subject name and code
+  classes: { id: string; className: string; teacherId: string; students: string[]; subjects: { name: string; code: string }[] }[];
   students: Student[];
-    attendance: { classId: string; date: number; studentId: string; status: string; }[];
-  } = {
+  // attendance is now subject-wise and date is a human-readable string like "26-11-25 00:00"
+  attendance: { classId: string; date: string; studentId: string; status: string; subjectCode: string }[];
+} = {
+  admins:[
+    {
+      id: 'Bw3j85VthWZK1dSNoZH1HS4SLE83',
+      userName: 'guest.admin',
+      email: 'guestadmin@arovation.ar',
+      role:'admin',
+      profilePictureUrl: 'https://example.com/rajesh.jpg',
+      lastLogin: '2025-10-26T18:00:00Z',
+      isActive: true,
+      settings: { theme: 'light', notifications: true },
+    }
+  ],
   teachers: [
     {
       id: 'T001',
@@ -79,24 +96,44 @@ export const teachersData: {
       className: '8 - A',
       teacherId: 'T001',
       students: ['S001', 'S002', 'S003', 'S004'],
+      subjects: [
+        { name: 'Mathematics', code: 'MATH101' },
+        { name: 'Science', code: 'SCI101' },
+        { name: 'English', code: 'ENG101' },
+      ]
     },
     {
       id: 'C102',
       className: '9 - B',
       teacherId: 'T001',
       students: ['S005', 'S006', 'S007', 'S008'],
+      subjects: [
+        { name: 'Mathematics', code: 'MATH101' },
+        { name: 'Science', code: 'SCI101' },
+        { name: 'English', code: 'ENG101' },
+      ]
     },
     {
       id: 'C103',
       className: '7 - C',
       teacherId: 'T002',
       students: ['S009', 'S010', 'S011', 'S012'],
+      subjects: [
+        { name: 'Mathematics', code: 'MATH101' },
+        { name: 'Science', code: 'SCI101' },
+        { name: 'English', code: 'ENG101' },
+      ]
     },
     {
       id: 'C104',
       className: '10 - A',
       teacherId: 'T003',
       students: ['S013', 'S014', 'S015', 'S016'],
+      subjects: [
+        { name: 'Mathematics', code: 'MATH101' },
+        { name: 'Science', code: 'SCI101' },
+        { name: 'English', code: 'ENG101' },
+      ]
     }
   ],
   students: [
@@ -185,104 +222,63 @@ export const teachersData: {
     classId: 'C102',
   },
 ],
-  attendance:[
-  { "classId": "C101", "date": 1737907200000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1737907200000, "studentId": "S002", "status": "Absent" },
-  { "classId": "C101", "date": 1737907200000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737907200000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737907200000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1737907200000, "studentId": "S006", "status": "Present" },
+  attendance: [
+    // Dates converted to human-readable strings (DD-MM-YY HH:MM) and made subject-specific
+    { classId: 'C101', date: '26-11-25 00:00', studentId: 'S001', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '26-11-25 00:00', studentId: 'S002', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '26-11-25 00:00', studentId: 'S003', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '26-11-25 00:00', studentId: 'S004', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '26-11-25 00:00', studentId: 'S005', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '26-11-25 00:00', studentId: 'S006', status: 'Present', subjectCode: 'MATH101' },
 
-  { "classId": "C101", "date": 1737820800000, "studentId": "S001", "status": "Absent" },
-  { "classId": "C101", "date": 1737820800000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737820800000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737820800000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737820800000, "studentId": "S005", "status": "Present" },
-  { "classId": "C101", "date": 1737820800000, "studentId": "S006", "status": "Absent" },
+    { classId: 'C101', date: '25-11-25 00:00', studentId: 'S001', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '25-11-25 00:00', studentId: 'S002', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '25-11-25 00:00', studentId: 'S003', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '25-11-25 00:00', studentId: 'S004', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '25-11-25 00:00', studentId: 'S005', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '25-11-25 00:00', studentId: 'S006', status: 'Absent', subjectCode: 'MATH101' },
 
-  { "classId": "C101", "date": 1737734400000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1737734400000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737734400000, "studentId": "S003", "status": "Absent" },
-  { "classId": "C101", "date": 1737734400000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737734400000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1737734400000, "studentId": "S006", "status": "Present" },
+    { classId: 'C101', date: '24-11-25 00:00', studentId: 'S001', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '24-11-25 00:00', studentId: 'S002', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '24-11-25 00:00', studentId: 'S003', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '24-11-25 00:00', studentId: 'S004', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '24-11-25 00:00', studentId: 'S005', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '24-11-25 00:00', studentId: 'S006', status: 'Present', subjectCode: 'MATH101' },
 
-  { "classId": "C101", "date": 1737648000000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1737648000000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737648000000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737648000000, "studentId": "S004", "status": "Absent" },
-  { "classId": "C101", "date": 1737648000000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1737648000000, "studentId": "S006", "status": "Present" },
+    { classId: 'C101', date: '23-11-25 00:00', studentId: 'S001', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '23-11-25 00:00', studentId: 'S002', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '23-11-25 00:00', studentId: 'S003', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '23-11-25 00:00', studentId: 'S004', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '23-11-25 00:00', studentId: 'S005', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '23-11-25 00:00', studentId: 'S006', status: 'Present', subjectCode: 'MATH101' },
 
-  { "classId": "C101", "date": 1737561600000, "studentId": "S001", "status": "Absent" },
-  { "classId": "C101", "date": 1737561600000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737561600000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737561600000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737561600000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1737561600000, "studentId": "S006", "status": "Present" },
+    { classId: 'C101', date: '22-11-25 00:00', studentId: 'S001', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '22-11-25 00:00', studentId: 'S002', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '22-11-25 00:00', studentId: 'S003', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '22-11-25 00:00', studentId: 'S004', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '22-11-25 00:00', studentId: 'S005', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '22-11-25 00:00', studentId: 'S006', status: 'Present', subjectCode: 'MATH101' },
 
-  { "classId": "C101", "date": 1737475200000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1737475200000, "studentId": "S002", "status": "Absent" },
-  { "classId": "C101", "date": 1737475200000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737475200000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737475200000, "studentId": "S005", "status": "Present" },
-  { "classId": "C101", "date": 1737475200000, "studentId": "S006", "status": "Absent" },
+    { classId: 'C101', date: '21-11-25 00:00', studentId: 'S001', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '21-11-25 00:00', studentId: 'S002', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '21-11-25 00:00', studentId: 'S003', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '21-11-25 00:00', studentId: 'S004', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '21-11-25 00:00', studentId: 'S005', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '21-11-25 00:00', studentId: 'S006', status: 'Absent', subjectCode: 'MATH101' },
 
-  { "classId": "C101", "date": 1737388800000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1737388800000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737388800000, "studentId": "S003", "status": "Absent" },
-  { "classId": "C101", "date": 1737388800000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737388800000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1737388800000, "studentId": "S006", "status": "Present" },
+    { classId: 'C101', date: '20-11-25 00:00', studentId: 'S001', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '20-11-25 00:00', studentId: 'S002', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '20-11-25 00:00', studentId: 'S003', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '20-11-25 00:00', studentId: 'S004', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '20-11-25 00:00', studentId: 'S005', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '20-11-25 00:00', studentId: 'S006', status: 'Present', subjectCode: 'MATH101' },
 
-  { "classId": "C101", "date": 1737302400000, "studentId": "S001", "status": "Absent" },
-  { "classId": "C101", "date": 1737302400000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737302400000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737302400000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737302400000, "studentId": "S005", "status": "Present" },
-  { "classId": "C101", "date": 1737302400000, "studentId": "S006", "status": "Absent" },
-
-  { "classId": "C101", "date": 1737216000000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1737216000000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737216000000, "studentId": "S003", "status": "Absent" },
-  { "classId": "C101", "date": 1737216000000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737216000000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1737216000000, "studentId": "S006", "status": "Present" },
-
-  { "classId": "C101", "date": 1737129600000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1737129600000, "studentId": "S002", "status": "Absent" },
-  { "classId": "C101", "date": 1737129600000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737129600000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737129600000, "studentId": "S005", "status": "Present" },
-  { "classId": "C101", "date": 1737129600000, "studentId": "S006", "status": "Absent" },
-
-  { "classId": "C101", "date": 1737043200000, "studentId": "S001", "status": "Absent" },
-  { "classId": "C101", "date": 1737043200000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1737043200000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1737043200000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1737043200000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1737043200000, "studentId": "S006", "status": "Present" },
-
-  { "classId": "C101", "date": 1736956800000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1736956800000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1736956800000, "studentId": "S003", "status": "Absent" },
-  { "classId": "C101", "date": 1736956800000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1736956800000, "studentId": "S005", "status": "Present" },
-  { "classId": "C101", "date": 1736956800000, "studentId": "S006", "status": "Absent" },
-
-  { "classId": "C101", "date": 1736870400000, "studentId": "S001", "status": "Present" },
-  { "classId": "C101", "date": 1736870400000, "studentId": "S002", "status": "Absent" },
-  { "classId": "C101", "date": 1736870400000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1736870400000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1736870400000, "studentId": "S005", "status": "Absent" },
-  { "classId": "C101", "date": 1736870400000, "studentId": "S006", "status": "Present" },
-
-  { "classId": "C101", "date": 1736784000000, "studentId": "S001", "status": "Absent" },
-  { "classId": "C101", "date": 1736784000000, "studentId": "S002", "status": "Present" },
-  { "classId": "C101", "date": 1736784000000, "studentId": "S003", "status": "Present" },
-  { "classId": "C101", "date": 1736784000000, "studentId": "S004", "status": "Present" },
-  { "classId": "C101", "date": 1736784000000, "studentId": "S005", "status": "Present" },
-  { "classId": "C101", "date": 1736784000000, "studentId": "S006", "status": "Absent" }
-]
+    { classId: 'C101', date: '19-11-25 00:00', studentId: 'S001', status: 'Absent', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '19-11-25 00:00', studentId: 'S002', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '19-11-25 00:00', studentId: 'S003', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '19-11-25 00:00', studentId: 'S004', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '19-11-25 00:00', studentId: 'S005', status: 'Present', subjectCode: 'MATH101' },
+    { classId: 'C101', date: '19-11-25 00:00', studentId: 'S006', status: 'Absent', subjectCode: 'MATH101' }
+  ]
 
 };

@@ -55,7 +55,7 @@ export default function GenericTable<T>({
 
   return (
     <div className={className}>
-      <div className="overflow-auto rounded-md shadow-sm">
+      <div className="overflow-auto rounded-md shadow-sm border">
         <Table>
           {caption && <TableCaption>{caption}</TableCaption>}
           <TableHeader>
