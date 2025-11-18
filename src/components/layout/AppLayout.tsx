@@ -9,7 +9,7 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
         <AppSidebar />
         <div className="flex flex-col flex-1">
           <NavBar />
-          <main className="overflow-y-auto p-4">
+          <main className="overflow-y-auto p-4 h-full">
             {children ? children : <Outlet />}
           </main>
         </div>

@@ -3,6 +3,13 @@ import { addDocument, batchWrite, buildQuery, updateDocument } from "./firebaseU
 import { AttendanceRecord } from "./interfaces/user.interface";
 import { getDocs } from "firebase/firestore";
 
+// Get all attendance records (no filters)
+export const getAllAttendance = async () => {
+  const attendanceQuery = buildQuery(Collections.ATTENDANCE, []);
+  const snapshot = await getDocs(attendanceQuery);
+  return snapshot.docs.map((d) => d.data()) as AttendanceRecord[];
+};
+
 // Get attendance for a specific student
 export const getAllAttendanceForStudent = async (studentId: string) => {
   const attendanceData = buildQuery(Collections.ATTENDANCE, [
@@ -64,7 +71,7 @@ export const markAttendanceForMultipleStudents = async (
   try {
     const operations: {
       id?: string;
-      data: any;
+      data: Partial<AttendanceRecord>;
       type: "set" | "update";
     }[] = [];
 

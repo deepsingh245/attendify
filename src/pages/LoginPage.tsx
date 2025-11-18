@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+// firebase auth helpers are provided via '@/firebase/firebaseUtils'
 // logo removed to avoid image import typing issues; using text title instead
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { login } from '@/firebase/firebaseUtils';
+import { getAuthErrorMessage } from '@/constants/constants';
+import { dangerToast } from '@/lib/utils';
 
 type Role = 'admin' | 'teacher' | 'student' | 'guest' | null;
 
@@ -30,62 +32,52 @@ const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<Role>(null);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const resetForm = () => {
     setEmail('');
     setPassword('');
-    setError('');
   };
 
   const handleRoleClick = (role: Role) => {
     setSelectedRole(role);
     resetForm();
   };
-
+  
   const [loading, setLoading] = useState(false);
   const [showUserNotFoundDialog, setShowUserNotFoundDialog] = useState(false);
-
+  
   const guestLogin = async (role: Role) => {
-    setError('');
     setLoading(true);
 
     // Map roles to guest credentials (as requested)
     const creds: Record<string, { email: string; password: string }> = {
-      admin: { email: 'ghuestAdmin@attendify.ar', password: 'guest@,123' },
-      teacher: { email: 'guestteacher@attendify.ar', password: 'guest@,123' },
-      student: { email: 'gueststudent@attendify.ar', password: 'guest@,123' },
-      guest: { email: 'guest@attendify.ar', password: 'guest@,123' },
+      admin: { email: "guestadmin@arovation.ar", password: "guest@,123" },
+      teacher: { email: "guestteacher@attendify.ar", password: "guest@,123" },
+      student: { email: "gueststudent@attendify.ar", password: "guest@,123" },
+      guest: { email: "guest@attendify.ar", password: "guest@,123" },
     };
 
-    const cred = role ? creds[role] : creds['guest'];
+    const cred = role ? creds[role] : creds["guest"];
+    if (role) localStorage.setItem("attendify_role", role);
 
     try {
-      // Try to sign in; if user doesn't exist, create it and then sign in
       try {
-        await login(cred.email, cred.password);
-      } catch (innerErr: unknown) {
-        const code = (innerErr && typeof innerErr === 'object' && 'code' in innerErr) ? (innerErr as { code?: string }).code : undefined;
-        console.log("🚀 ~ guestLogin ~ code:", code)
-        // If user not found, show dialog asking to contact admin
-        if (code === 'auth/user-not-found') {
-          setShowUserNotFoundDialog(true);
-          return;
-        } else {
-          throw innerErr;
-        }
+        const user = await login(cred.email, cred.password);
+        console.log("🚀 ~ guestLogin ~ user:", user)
+      } catch (err: unknown) {
+        const message = getAuthErrorMessage(err);
+        dangerToast(message)
       }
 
       // Navigate to the appropriate role route
-      if (role === 'admin') navigate('/admin');
-      else if (role === 'teacher') navigate('/teacher');
-      else if (role === 'student') navigate('/student');
-      else navigate('/');
+      if (role === "admin") navigate("/admin");
+      else if (role === "teacher") navigate("/teacher");
+      else if (role === "student") navigate("/student");
+      else navigate("/");
     } catch (err: unknown) {
-      console.error('Guest login failed', err);
-      const msg = (err as Error)?.message ?? String(err ?? 'Guest login failed');
-      setError(msg);
+      const message = getAuthErrorMessage(err);
+      dangerToast(message)
     } finally {
       setLoading(false);
     }
@@ -94,16 +86,29 @@ const LoginPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Email and password are required.');
+      dangerToast('Email and password are required.');
       return;
     }
-    login(email, password)
-    // Here we just simulate role-based routing after successful login.
-    if (selectedRole === 'admin') navigate('/admin');
-    else if (selectedRole === 'teacher') navigate('/teacher');
-    else if (selectedRole === 'student') navigate('/student');
-    else if (selectedRole === 'guest') navigate('/guest');
-    else setError('Please select a role to continue.');
+    setLoading(true);
+    (async () => {
+      try {
+        await login(email, password);
+        // Cache selected role if user chose one on the form
+        if (selectedRole) localStorage.setItem("attendify_role", selectedRole);
+
+        // Navigate according to selectedRole when present, otherwise router will
+        // resolve role from token/collection and redirect the user.
+        if (selectedRole === "admin") navigate("/admin");
+        else if (selectedRole === "teacher") navigate("/teacher");
+        else if (selectedRole === "student") navigate("/student");
+        else navigate("/");
+      } catch (err: unknown) {
+        const message = getAuthErrorMessage(err);
+        dangerToast(message)
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   return (
@@ -135,8 +140,6 @@ const LoginPage: React.FC = () => {
                     Choose your role to continue
                   </p>
                 </div>
-                {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
-
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 w-full">
                   {(
                     [
@@ -224,6 +227,8 @@ const LoginPage: React.FC = () => {
                               type="email"
                               placeholder="m@example.com"
                               required
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
                             />
                           </Field>
                           <Field>
@@ -238,17 +243,10 @@ const LoginPage: React.FC = () => {
                                 Forgot your password?
                               </a>
                             </div>
-                            <Input id="password" type="password" required />
+                            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
                           </Field>
                           <Field>
                             <Button type="submit">Login</Button>
-                            {/* <Button variant="outline" type="button">
-                              Login with Google 
-                            </Button> */}
-                            {/* <FieldDescription className="text-center">
-                              Don&apos;t have an account?{' '}
-                              <Link to="/signup">Sign up</Link>
-                            </FieldDescription> */}
                           </Field>
                         </FieldGroup>
                     </CardContent>
