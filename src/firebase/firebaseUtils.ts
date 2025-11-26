@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { LOCAL_STORAGE_KEYS } from '@/constants/constants';
 import { initializeApp } from 'firebase/app';
 import {
