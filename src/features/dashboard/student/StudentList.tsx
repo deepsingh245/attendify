@@ -130,22 +130,24 @@ const StudentList = () => {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-2 sm:p-4 md:p-6">
       <GlobalLoader show={loading} message="Loading students..." />
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-200 mb-2">Student List</h1>
-        <p className="text-slate-400">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-200 mb-2">Student List</h1>
+        <p className="text-xs sm:text-sm text-slate-400">
           Overview of all students with attendance and fee payment status
         </p>
       </div>
 
-      <GenericTable
-        columns={columns}
-        data={students}
-        pageSize={10}
-        showPagination={true}
-        caption={`Showing ${students.length} students`}
-      />
+      <div className="overflow-x-auto -mx-2 sm:mx-0">
+        <GenericTable
+          columns={columns}
+          data={students}
+          pageSize={10}
+          showPagination={true}
+          caption={`Showing ${students.length} students`}
+        />
+      </div>
     </div>
   );
 };

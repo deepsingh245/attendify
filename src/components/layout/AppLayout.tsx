@@ -4,18 +4,18 @@ import { AppSidebar } from './AppSidebar';
 import NavBar from './Navbar';
 const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="flex h-screen w-full">
         <AppSidebar />
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 min-w-0">
           <NavBar />
-          <main className="overflow-y-auto p-4 h-full">
+          <main className="overflow-y-auto p-2 sm:p-4 md:p-6 h-full w-full">
             {children ? children : <Outlet />}
           </main>
         </div>
       </div>
     </SidebarProvider>
   );
-};
+}
 
 export default AppLayout;

@@ -64,10 +64,10 @@ const LoginPage: React.FC = () => {
     try {
       try {
         const user = await login(cred.email, cred.password);
-        console.log("🚀 ~ guestLogin ~ user:", user)
+        console.log("🚀 ~ guestLogin ~ user:", user);
       } catch (err: unknown) {
         const message = getAuthErrorMessage(err);
-        dangerToast(message)
+        dangerToast(message);
       }
 
       // Navigate to the appropriate role route
@@ -112,8 +112,8 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors">
-  <div className="w-full max-w-3xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors p-2 sm:p-4">
+  <div className="w-full max-w-lg sm:max-w-3xl">
         <div className="flex items-center justify-center">
           <div className={`${!selectedRole ? 'bg-white dark:bg-slate-800' : ''} rounded-lg shadow p-6 w-full`}>
             {/* User-not-found dialog */}
@@ -140,7 +140,7 @@ const LoginPage: React.FC = () => {
                     Choose your role to continue
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mt-4 sm:mt-6 w-full">
                   {(
                     [
                       { key: "admin", icon: Shield },

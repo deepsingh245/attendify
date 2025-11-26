@@ -46,6 +46,7 @@ const ClassDetail = () => {
   const [showSaveButton, setShowSaveButton] = useState<boolean>(false);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [attendanceStats, setAttendanceStats] = useState<AttendanceRecord[]>([]);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
 
   const teacherId = "T001";
   const classId = id;
@@ -97,6 +98,28 @@ const ClassDetail = () => {
 
     attendaceStats();
   }, [classId, todayKey, studentsInClass, totalStudents]);
+
+  // Update totals when attendance records change (local changes)
+  useEffect(() => {
+    // Combine both Firebase stats and local records, with local records taking precedence
+    const map: Record<string, AttendanceRecord> = {};
+    
+    for (const r of (attendanceStats ?? [])) {
+      map[`${r.studentId}`] = r;
+    }
+    for (const r of attendanceRecords) {
+      map[`${r.studentId}`] = r;
+    }
+
+    const allRecords = Object.values(map);
+    const present = allRecords.filter((rec) => rec.status === "Present").length;
+    const onLeave = allRecords.filter((rec) => rec.status === "Leave").length;
+    const absent = totalStudents - present - onLeave;
+
+    setPresentToday(present);
+    setOnLeaveToday(onLeave);
+    setAbsentToday(absent >= 0 ? absent : 0);
+  }, [attendanceRecords, attendanceStats, totalStudents]);
   
   const onRecognize = (ids: string[]) => {
     // Update attendanceRecords state: set Present for each recognized student for today
@@ -124,6 +147,30 @@ const ClassDetail = () => {
       const result = Object.values(map);
       setShowSaveButton(true);
       return result;
+    });
+  };
+
+  const handleAttendanceChange = (studentId: string, status: 'Present' | 'Absent' | 'Leave') => {
+    setAttendanceRecords((prev) => {
+      const map: Record<string, AttendanceRecord> = {};
+      for (const r of prev) {
+        map[`${r.studentId}|${r.date}`] = r;
+      }
+      for (const r of (attendanceStats as AttendanceRecord[] ?? [])) {
+        map[`${r.studentId}|${r.date}`] = r;
+      }
+
+      const key = `${studentId}|${todayKey}`;
+      map[key] = {
+        studentId,
+        date: todayKey,
+        status,
+        classId: classId!,
+      } as AttendanceRecord;
+
+      setShowSaveButton(true);
+      // setEditingStudentId(null);
+      return Object.values(map);
     });
   };
 
@@ -182,7 +229,7 @@ const ClassDetail = () => {
 
   // If teacher data hasn't loaded yet, show placeholder (hooks have already run)
   if (!teacher) {
-    return <div className="p-6">Loading teacher data...</div>;
+    return <GlobalLoader show={!teacher} message="Fetching class details..." />;
   }
 
 
@@ -215,7 +262,7 @@ const ClassDetail = () => {
 
       {/* Mark Attendance Dialog */}
 
-     <SelectAttendanceMethodModal saving={saving} setManualAttendanceOpen={setManualAttendanceOpen} />
+     <Button className="w-fit self-end mb-4" onClick={() => setManualAttendanceOpen(!manualAttendanceOpen)}>{manualAttendanceOpen ? "Use Facial Recognition" : "Use Manual Attendance"}</Button>
       {/* Students Table */}
       <div className="flex flex-col gap-3">
         {!manualAttendanceOpen && (
@@ -254,7 +301,53 @@ const ClassDetail = () => {
                 return <div className={cls}>{attendanceVal}</div>
               } },
             { key: 'leaveToday', header: 'Leave', render: (r: ClassTableRow) => r.leaveToday, align: 'center' },
-            { key: 'edit', header: 'Edit', render: () => <Edit className="cursor-pointer h-5 w-5 text-center" />, align: 'center' },
+            { key: 'edit', header: 'Edit', render: (r: ClassTableRow) => (
+              editingStudentId === r.id ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={
+                      (attendanceRecords.find((a) => a.studentId === r.id && a.date === todayKey)?.status || 
+                       attendanceStats.find((a) => a.studentId === r.id && a.date === todayKey)?.status) === 'Present'
+                        ? 'default'
+                        : 'outline'
+                    }
+                    onClick={() => handleAttendanceChange(r.id, 'Present')}
+                    className="w-8 h-8 p-0"
+                  >
+                    P
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={
+                      (attendanceRecords.find((a) => a.studentId === r.id && a.date === todayKey)?.status || 
+                       attendanceStats.find((a) => a.studentId === r.id && a.date === todayKey)?.status) === 'Absent'
+                        ? 'default'
+                        : 'outline'
+                    }
+                    onClick={() => handleAttendanceChange(r.id, 'Absent')}
+                    className="w-8 h-8 p-0"
+                  >
+                    A
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={
+                      (attendanceRecords.find((a) => a.studentId === r.id && a.date === todayKey)?.status || 
+                       attendanceStats.find((a) => a.studentId === r.id && a.date === todayKey)?.status) === 'Leave'
+                        ? 'default'
+                        : 'outline'
+                    }
+                    onClick={() => handleAttendanceChange(r.id, 'Leave')}
+                    className="w-8 h-8 p-0"
+                  >
+                    L
+                  </Button>
+                </div>
+              ) : (
+                <Edit className="cursor-pointer h-5 w-5 text-center" onClick={() => setEditingStudentId(r.id)} />
+              )
+            ), align: 'center' },
           ]}
         />
 

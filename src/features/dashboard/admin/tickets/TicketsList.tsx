@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import Ticket from './Ticket'
 import GenericTable from '@/components/shared/GenericTable'
 import { useNavigate } from 'react-router-dom'
@@ -52,9 +52,11 @@ const TicketsList = () => {
   ]
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Tickets</h2>
-      <GenericTable columns={columns} data={tickets} pageSize={10} />
+    <div className="p-2 sm:p-4 md:p-6">
+      <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">Tickets</h2>
+      <div className="overflow-x-auto -mx-2 sm:mx-0">
+        <GenericTable columns={columns} data={tickets} pageSize={10} />
+      </div>
 
       {selected && (
         <div className="mt-6">

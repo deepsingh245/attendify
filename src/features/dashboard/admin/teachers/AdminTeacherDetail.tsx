@@ -55,11 +55,11 @@ const chartConfig = {
 } satisfies ChartConfig
 
   return (
-    <div className="p-6">
+    <div className="p-2 sm:p-4 md:p-6">
       <GlobalLoader show={loading} message="Loading teacher data..." />
-      <div className="flex items-start gap-6">
-        <div className="flex-1 space-y-6">
-          <div className="grid grid-cols-3 gap-4">
+      <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-6">
+        <div className="flex-1 space-y-4 sm:space-y-6 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>${(4179).toLocaleString()}</CardTitle>

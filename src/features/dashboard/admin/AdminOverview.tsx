@@ -98,10 +98,10 @@ const AdminOverview = () => {
     if (rec.status === 'Present') monthlyCounts[mi].present += 1;
   }
 
-  const monthlyData = months.map((m, i) => ({
-    month: m,
-    desktop: monthlyCounts[i].total ? Math.round((monthlyCounts[i].present / monthlyCounts[i].total) * 100) : 0,
-  }));
+  // const monthlyData = months.map((m, i) => ({
+  //   month: m,
+  //   desktop: monthlyCounts[i].total ? Math.round((monthlyCounts[i].present / monthlyCounts[i].total) * 100) : 0,
+  // }));
 
   // class-wise overall attendance percent
   const classData = classes.map((c) => {
@@ -113,9 +113,9 @@ const AdminOverview = () => {
   });
 
   return (
-    <div className="p-6">
+    <div className="p-2 sm:p-4 md:p-6">
       <GlobalLoader show={loading} message="Loading data..." />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
         {cards.map((card) => {
           const IconComponent = card.icon;
           return (
@@ -144,9 +144,9 @@ const AdminOverview = () => {
       </div>
 
       {/* Chart Section */}
-      <div className="mt-6">
-        <h2 className="text-lg font-medium mb-2">Attendance Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="mt-4 sm:mt-6">
+        <h2 className="text-base sm:text-lg font-medium mb-2">Attendance Overview</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-4">
           <ChartBar chartData={classData} />
           <ChartArea chartData={classData} />
         </div>

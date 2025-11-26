@@ -120,17 +120,17 @@ const ClassList = () => {
   return (
     <>
       <GlobalLoader show={loading} message="Loading Classes..." />
-      <div className="flex flex-col gap-3">
-        <div className="p-1 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Classes</h1>
-          <Button variant="secondary" className="bg-primary" onClick={() => {}}>
+      <div className="flex flex-col gap-2 sm:gap-3">
+        <div className="p-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+          <h1 className="text-xl sm:text-2xl font-bold">Classes</h1>
+          <Button variant="secondary" className="bg-primary text-xs sm:text-sm w-full sm:w-auto" onClick={() => {}}>
             Add Class
           </Button>
         </div>
         {classes.length === 0 ? (
-          <div className="text-sm text-muted-foreground py-4">No classes found.</div>
+          <div className="text-xs sm:text-sm text-muted-foreground py-4">No classes found.</div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
             {classes.map(renderClassCard)}
           </div>
         )}
