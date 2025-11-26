@@ -1,3 +1,4 @@
+import { LOCAL_STORAGE_KEYS } from '@/constants/constants';
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
@@ -55,6 +56,8 @@ export async function resetPassword(email: string) {
 }
 
 export async function logout() {
+  localStorage.removeItem(LOCAL_STORAGE_KEYS.USER);
+  localStorage.removeItem(LOCAL_STORAGE_KEYS.ROLE);
   return signOut(auth);
 }
 

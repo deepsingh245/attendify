@@ -7,7 +7,6 @@ import AdminOverview from "@/features/dashboard/admin/AdminOverview";
 import AdminTeacherDetail from "@/features/dashboard/admin/teachers/AdminTeacherDetail";
 import AdminClassDetail from "@/features/dashboard/admin/classes/AdminClassDetail";
 import AdminStudentDetail from "@/features/dashboard/admin/students/AdminStudentDetail";
-import TeacherClasses from "@/features/dashboard/teacher/TeacherClasses";
 import StudentOverview from "@/features/dashboard/student/StudentOverview";
 import LoginPage from "@/pages/LoginPage";
 import SignUp from "@/pages/SignUp";
@@ -22,9 +21,10 @@ import ClassList from "./features/dashboard/admin/classes/ClassList";
 import StudentList from "./features/dashboard/student/StudentList";
 import TicketRoute from "./features/dashboard/admin/tickets/TicketRoute";
 import TicketsList from "./features/dashboard/admin/tickets/TicketsList";
+import ProfilePage from "./features/profile/ProfilePage";
+import ClassDetail from "./features/dashboard/teacher/ClassDetail";
 
 export default function AppRoutes() {
-  // Resolve the authenticated user (teacher or student) once and share across the routes
   const [currentUser, setCurrentUser] = useState<
     Teacher | Student | Admin | null
   >(null);
@@ -34,9 +34,9 @@ export default function AppRoutes() {
     localStorage.setItem("user", JSON.stringify(user));
     setCurrentUser(user);
   };
+  const auth = getAuth();
   
   useEffect(() => {
-    const auth = getAuth();
     const unsub = onAuthStateChanged(auth, async (user) => {
       console.log("🚀 ~ AppRoutes ~ user:", user);
       if (!user) {
@@ -77,9 +77,8 @@ export default function AppRoutes() {
     });
 
     return () => unsub();
-  }, []);
+  }, [auth]);
 
-  // Component to redirect the root/unknown routes to a role-based home using resolved currentUser
   function RoleBasedHome() {
     const roleClaim = localStorage.getItem('attendify_role') as string | null;
     if (resolvingUser) return null;
@@ -89,7 +88,7 @@ export default function AppRoutes() {
     if (roleClaim === "admin") return <Navigate to="/admin" replace />;
     if (roleClaim === "teacher") return <Navigate to="/teacher" replace />;
     if (roleClaim === "student") return <Navigate to="/student" replace />;
-    // fallback
+
     return <Navigate to="/" replace />;
   }
   return (
@@ -98,7 +97,6 @@ export default function AppRoutes() {
       <Route path="/signup" element={<SignUp />} />
 
       <Route element={<AppLayout />}>
-        {/* send root to a dynamic role-based home */}
         <Route path="/" element={<RoleBasedHome />} />
 
         {/* Admin routes - guarded */}
@@ -120,6 +118,7 @@ export default function AppRoutes() {
           <Route path="/admin/students/:id" element={<AdminStudentDetail />} />
           <Route path="/admin/tickets" element={<TicketsList />} />
           <Route path="/admin/tickets/:id" element={<TicketRoute />} />
+          <Route path="/admin/profile" element={<ProfilePage />} />
         </Route>
 
         {/* Teacher routes - guarded */}
@@ -137,8 +136,8 @@ export default function AppRoutes() {
             path="/teacher/classes"
             element={<Navigate to="/teacher/classes" />}
           />
-          <Route path="/teacher/class/:id" element={<TeacherClasses />} />
-          <Route path="/teacher/profile" element={<TeacherOverView />} />
+          <Route path="/teacher/class/:id" element={<ClassDetail />} />
+          <Route path="/teacher/profile" element={<ProfilePage />} />
         </Route>
 
         {/* Student routes - guarded */}
@@ -153,7 +152,7 @@ export default function AppRoutes() {
         >
           <Route path="/student" element={<StudentOverview />} />
           <Route path="/student/classes" element={<StudentOverview />} />
-          <Route path="/student/profile" element={<StudentOverview />} />
+          <Route path="/student/profile" element={<ProfilePage />} />
         </Route>
 
         {/* catch-all unknown routes and send users to their role home */}

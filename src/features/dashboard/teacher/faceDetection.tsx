@@ -2,7 +2,6 @@ import React, { useRef, useState, useCallback } from "react";
 import * as faceapi from "face-api.js";
 // import { supabase } from "@/firebase/supabase.utils";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -133,7 +132,15 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
       // Lazy-load models & descriptors on first upload
       await ensureModelsLoaded();
 
-  const img = await bufferToImage(file as Blob);
+      // Refresh labels on every upload
+      setLoading(true);
+      const { descriptors, labelMap } = await loadLabeledDescriptors(studentsList, BUCKET_URL);
+      labeledDescriptorsRef.current = descriptors;
+      labeledMapRef.current = labelMap;
+      faceMatcherRef.current = createFaceMatcher(descriptors, 0.6);
+      setLoading(false);
+
+      const img = await bufferToImage(file as Blob);
       // set image src via state so the <img> is rendered with src and the ref is attached
       setImageSrc(img.src);
 
@@ -178,18 +185,18 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
       setGlobalLoading(false);
       setError(String((err as Error)?.message ?? String(err)));
     }
-  }, [drawDetections, ensureModelsLoaded]);
+  }, [drawDetections, ensureModelsLoaded, studentsList]);
 
 
   return (
-    <Card className="p-6 space-y-4">
+    <Card className="p-2 sm:p-4 md:p-6 space-y-2 sm:space-y-4">
       <GlobalLoader show={globalLoading} message="Recognizing..." />
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Face Recognition Attendance</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <h2 className="text-base sm:text-lg font-semibold">Face Recognition Attendance</h2>
         {loading ? (
           <div className="flex items-center gap-2">
             <Spinner />
-            <span className="text-sm text-muted-foreground">Loading models...</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">Loading models...</span>
           </div>
         ) : null}
       </div>
@@ -201,23 +208,12 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 items-start">
         <div className="md:col-span-1">
-          <Label htmlFor="face-file" className="mb-2">Upload image</Label>
-          <Input id="face-file" type="file" accept="image/*" onChange={handleUpload} disabled={loading} className="cursor-pointer" />
-          <div className="mt-3 flex gap-2">
-            <Button onClick={async () => {
-              // reload descriptors on demand using service
-              setLoading(true);
-              const { descriptors, labelMap } = await loadLabeledDescriptors(studentsList, BUCKET_URL);
-              labeledDescriptorsRef.current = descriptors;
-              labeledMapRef.current = labelMap;
-              faceMatcherRef.current = createFaceMatcher(descriptors, 0.6);
-              setLoading(false);
-            }} disabled={loading}>Refresh Labels</Button>
-          </div>
-          <div className="mt-4">
-            <h4 className="text-sm font-medium">Detected</h4>
+          <Label htmlFor="face-file" className="mb-2 text-xs sm:text-sm">Upload image</Label>
+          <Input id="face-file" type="file" accept="image/*" onChange={handleUpload} disabled={loading} className="cursor-pointer text-xs sm:text-sm" />
+          <div className="mt-3 sm:mt-4">
+            <h4 className="text-xs sm:text-sm font-medium">Detected</h4>
             <ul className="mt-2 list-disc list-inside space-y-1">
               {detectedNames.length === 0 && <li className="text-sm text-muted-foreground">No detections yet</li>}
               {detectedNames.map((name, i) => (

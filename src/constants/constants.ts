@@ -38,3 +38,8 @@ export const getAuthErrorMessage = (err: unknown): string =>{
   const code = err && typeof err === "object" && "code" in err ? (err as { code?: string }).code : undefined;
   return AUTH_ERROR_MESSAGES[code as AuthErrorCode] || 'An unexpected error occurred.';
 }
+
+export const LOCAL_STORAGE_KEYS = {
+  USER: 'user',
+  ROLE: 'attendify_role',
+};

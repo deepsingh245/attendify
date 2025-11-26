@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTeacherById } from "@/firebase/teachersUtils";
 import { Button } from "@/components/ui/button";
+import GlobalLoader from "@/components/ui/global-loader";
 
 const TeacherClasses = () => {
   const [classes, setClasses] = useState<Class[]>([]);
@@ -47,7 +48,7 @@ const TeacherClasses = () => {
   return (
     <>
       {/* <Button onClick={setDocTeach}>set Teacher Data</Button> */}
-      {loading && <div>Loading classes...</div>}
+      <GlobalLoader show={loading} message="Loading classes..." />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {classes.map((cls) => {
           const meta = classMeta[cls.id];
