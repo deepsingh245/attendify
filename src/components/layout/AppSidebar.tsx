@@ -19,6 +19,7 @@ import { Link, useLocation } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 import { User, Shield, GraduationCap, Ticket, User2Icon } from "lucide-react";
+import { getCachedUser } from "@/lib/utils";
 
 export function AppSidebar({ ...props }) {
   const { state } = useSidebar();
@@ -38,23 +39,11 @@ export function AppSidebar({ ...props }) {
 
       // Prefer a cached user object written by the router/ login flow.
       // This avoids extra Firestore reads and keeps the sidebar snappy.
-      try {
-        const raw = localStorage.getItem('user');
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw) as { role?: string; name?: string; userName?: string; email?: string } | null;
-            if (parsed && parsed.role) {
-              const r = parsed.role as 'admin' | 'teacher' | 'student';
-              setRole(r);
-              setDisplayName(parsed.name || parsed.userName || user.email || 'User');
-              return;
-            }
-          } catch (parseErr) {
-            console.error('Failed to parse cached user from localStorage:', parseErr);
-          }
-        }
-      } catch (e) {
-        console.error('Error reading cached user from localStorage:', e);
+      const cachedUser = getCachedUser(user.email);
+      if (cachedUser) {
+        setRole(cachedUser.role as 'admin' | 'teacher' | 'student');
+        setDisplayName(cachedUser.displayName);
+        return;
       }
 
       // Fallback: use auth profile info (no role available)
@@ -78,7 +67,7 @@ export function AppSidebar({ ...props }) {
   } else if (role === 'teacher') {
     menuRoutes = [
       { path: '/teacher', label: 'Overview', icon: GraduationCap },
-      { path: '/teacher/class', label: 'Classes', icon: GraduationCap },
+      // { path: '/teacher/class', label: 'Classes', icon: GraduationCap },
       { path: '/teacher/profile', label: 'Profile', icon: User },
     ];
   } else if (role === 'student') {

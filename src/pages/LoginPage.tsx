@@ -65,20 +65,15 @@ const LoginPage: React.FC = () => {
       try {
         const user = await login(cred.email, cred.password);
         console.log("🚀 ~ guestLogin ~ user:", user);
+        // Don't navigate here - let AppRoutes handle it via onAuthStateChanged
       } catch (err: unknown) {
         const message = getAuthErrorMessage(err);
         dangerToast(message);
+        setLoading(false);
       }
-
-      // Navigate to the appropriate role route
-      if (role === "admin") navigate("/admin");
-      else if (role === "teacher") navigate("/teacher");
-      else if (role === "student") navigate("/student");
-      else navigate("/");
     } catch (err: unknown) {
       const message = getAuthErrorMessage(err);
-      dangerToast(message)
-    } finally {
+      dangerToast(message);
       setLoading(false);
     }
   };

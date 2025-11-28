@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { logout } from "@/firebase/firebaseUtils";
 import { useNavigate, useLocation } from "react-router-dom";
-import { SearchBar } from "../ui/searchbar";
 import { useSidebar } from "@/components/ui/sidebar";
+import { getCachedUser, getCachedUserRole } from "@/lib/utils";
 // useState intentionally omitted for now
 
 const NavBar = () => {
@@ -29,18 +29,9 @@ const NavBar = () => {
     navigate(-1);
   };
  
-  const raw = typeof window !== 'undefined' ? localStorage.getItem('user') : null
-  const role = typeof window !== 'undefined' ? localStorage.getItem('attendify_role') : null
-  let initials = 'A'
-  try {
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      const name = parsed?.userName || parsed?.name || parsed?.email
-      if (name) initials = String(name).charAt(0).toUpperCase()
-    }
-  } catch {
-    /* ignore */
-  }
+  const cachedUser = getCachedUser();
+  const role = getCachedUserRole();
+  const initials = cachedUser?.displayName?.charAt(0).toUpperCase() || 'A';
   const logoutHandler = () => { 
     logout();
     console.log("Logout clicked");
@@ -67,7 +58,9 @@ const NavBar = () => {
       {/* Right actions */}
       <div className="flex items-center gap-1 sm:gap-3">
       {/* Hide search on mobile */}
-      <div className="hidden md:block"><SearchBar button={false} /></div>
+      {/* <div className="hidden md:block">
+        <SearchBar button={false} />
+      </div> */}
         <DropdownMenu>
            <DropdownMenuTrigger>
             <div className="p-2 rounded-md hover:bg-gray-100"><Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" /></div>

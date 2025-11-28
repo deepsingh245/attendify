@@ -23,6 +23,9 @@ import TicketRoute from "./features/dashboard/admin/tickets/TicketRoute";
 import TicketsList from "./features/dashboard/admin/tickets/TicketsList";
 import ProfilePage from "./features/profile/ProfilePage";
 import ClassDetail from "./features/dashboard/teacher/ClassDetail";
+import GlobalLoader from "./components/ui/global-loader";
+import { LOCAL_STORAGE_KEYS } from "@/constants/constants";
+import { getCachedUserRole } from "@/lib/utils";
 
 export default function AppRoutes() {
   const [currentUser, setCurrentUser] = useState<
@@ -36,51 +39,52 @@ export default function AppRoutes() {
   };
   const auth = getAuth();
   
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      console.log("🚀 ~ AppRoutes ~ user:", user);
-      if (!user) {
-        setUser(null);
-        setResolvingUser(false);
-        return;
-      }
+useEffect(() => {
+  setResolvingUser(true); // <--- mark loading immediately
 
-      try {
-        const roleClaim = localStorage.getItem('attendify_role') as string | null;
+  const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    console.log("Auth changed:", firebaseUser);
 
-        if (roleClaim === "teacher") {
-          const teacher = await getTeacherById(user.uid);
-          if (teacher) {
-            setUser(teacher);
-          }
-        } else if (roleClaim === "student") {
-          const student = await getStudentById(user.uid);
-          if (student) {
-            setUser(student);
-          }
-        } else if (roleClaim === "admin") {
-          const admin = await getAdminById(user.uid);
-          if (admin) {
-            setUser(admin);
-          }
-        }
-        else{
+    if (!firebaseUser) {
+      setUser(null);
+      setResolvingUser(false);
+      return;
+    }
+
+    try {
+      const role = localStorage.getItem(LOCAL_STORAGE_KEYS.ROLE);
+
+      let resolvedUser = null;
+
+      switch (role) {
+        case "teacher":
+          resolvedUser = await getTeacherById(firebaseUser.uid);
+          break;
+        case "student":
+          resolvedUser = await getStudentById(firebaseUser.uid);
+          break;
+        case "admin":
+          resolvedUser = await getAdminById(firebaseUser.uid);
+          break;
+        default:
           toast.error("User role not recognized. Please log in again.");
-          setUser(null);
-        }
-      } catch (err) {
-        console.error("Error resolving current user:", err);
-        setUser(null);
-      } finally {
-        setResolvingUser(false);
       }
-    });
 
-    return () => unsub();
-  }, [auth]);
+      setUser(resolvedUser);
+    } catch (err) {
+      console.error("Error resolving current user:", err);
+      setUser(null);
+    } finally {
+      setResolvingUser(false); // <--- only AFTER async fetch finishes
+    }
+  });
+
+  return () => unsub();
+}, [auth]);
+
 
   function RoleBasedHome() {
-    const roleClaim = localStorage.getItem('attendify_role') as string | null;
+    const roleClaim = getCachedUserRole();
     if (resolvingUser) return null;
     if (!currentUser) return <Navigate to="/login" replace />;
     // If user has role field, use it. Teacher objects may be used for admin as well depending on data.
@@ -91,7 +95,10 @@ export default function AppRoutes() {
 
     return <Navigate to="/" replace />;
   }
+
   return (
+    <>
+      <GlobalLoader show={resolvingUser} />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUp />} />
@@ -132,10 +139,6 @@ export default function AppRoutes() {
           }
         >
           <Route path="/teacher" element={<TeacherOverView />} />
-          <Route
-            path="/teacher/classes"
-            element={<Navigate to="/teacher/classes" />}
-          />
           <Route path="/teacher/class/:id" element={<ClassDetail />} />
           <Route path="/teacher/profile" element={<ProfilePage />} />
         </Route>
@@ -159,5 +162,6 @@ export default function AppRoutes() {
         <Route path="*" element={<RoleBasedHome />} />
       </Route>
     </Routes>
+    </>
   );
 }

@@ -1,11 +1,17 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback, memo } from 'react'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
-import { teachersData } from './teachersData'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Users, Clock, Edit2, Save, X, IndianRupee } from 'lucide-react'
+import { Users, Clock, Edit2, Save, X, IndianRupee, CheckCircle2 } from 'lucide-react'
+import { getTeacherClasses } from '@/firebase/teachersUtils'
+import { getStudentsInClass } from '@/firebase/studentUtils'
+import { getCachedUser } from '@/lib/utils'
+import { getAttendanceForClassOnDate } from '@/firebase/AttendanceUtils'
+import { Teacher, Class, AttendanceRecord } from '@/firebase/interfaces/user.interface'
+import DropdownButton from '@/components/shared/DropdownButton'
+import StatCard from '@/components/shared/StatCard'
 
 // Dashboard class shape
 type TeacherDashboardClass = {
@@ -13,6 +19,7 @@ type TeacherDashboardClass = {
   name: string
   attendance: number
   studentCount: number
+  isCompleted: boolean
 }
 
 // Timetable slot
@@ -43,61 +50,72 @@ const TeacherOverView = () => {
   const [newSlot, setNewSlot] = useState<Partial<TimeSlot>>({})
   const navigate = useNavigate()
 
+  // Memoize teacher data to prevent unnecessary re-fetches
+  const cachedUserData = useMemo(() => {
+    const cachedUser = getCachedUser();
+    return cachedUser ? (cachedUser as unknown as Teacher) : null;
+  }, []);
+
+  // Fetch dashboard data only when teacher data changes
   useEffect(() => {
-    function compute() {
-      const teacherId = 'T001'
-      const allClasses = teachersData.classes ?? []
-      const allStudents = teachersData.students ?? []
+    async function compute() {
+      if (!cachedUserData) return;
 
-      const teacherClasses = allClasses.filter((c) => c.teacherId === teacherId)
+      try {
+        const teacherClasses = await getTeacherClasses(cachedUserData.id, cachedUserData.classes);
 
-      const dashboardClasses = teacherClasses.map((c) => {
-        const studentsInClass = allStudents.filter((s) => s.classId === c.id)
-        let attendancePercent = 0
-        const latestDate = studentsInClass
-          .flatMap((s) => (s.attendance ?? []).map((a: { date: string }) => a.date))
-          .sort()
-          .pop()
+        const dashboardClasses = await Promise.all(
+          teacherClasses.map(async (classItem: Class) => {
+            const studentsInClass = await getStudentsInClass(classItem.id);
+            
+            // Get today's attendance for this class
+            const today = new Date();
+            const attendanceRecords = await getAttendanceForClassOnDate(classItem.id, today.getTime());
+            
+            // Calculate attendance percentage
+            let attendancePercent = 0;
+            if (studentsInClass.length > 0 && attendanceRecords.length > 0) {
+              const presentCount = (attendanceRecords as AttendanceRecord[]).filter(
+                (record: AttendanceRecord) => record.status === 'Present'
+              ).length;
+              attendancePercent = Math.round((presentCount / studentsInClass.length) * 100);
+            }
 
-        if (latestDate) {
-          const presentCount = studentsInClass.reduce((acc, s) => {
-            const rec = (s.attendance ?? []).find((a: { date: string; status: string }) => a.date === latestDate)
-            return acc + (rec && rec.status === 'Present' ? 1 : 0)
-          }, 0)
-          attendancePercent = studentsInClass.length ? Math.round((presentCount / studentsInClass.length) * 100) : 0
-        }
+            return {
+              id: classItem.id,
+              name: classItem.className || 'Class',
+              attendance: attendancePercent,
+              studentCount: studentsInClass.length,
+            };
+          })
+        );
 
-        return {
-          id: c.id,
-          name: c.className || 'Class',
-          attendance: attendancePercent,
-          studentCount: studentsInClass.length,
-        }
-      })
-
-      setClasses(dashboardClasses as TeacherDashboardClass[])
-      setTimetable(sampleTimetable)
+        setClasses(dashboardClasses as TeacherDashboardClass[]);
+        setTimetable(sampleTimetable);
+      } catch (error) {
+        console.error('Error loading teacher dashboard:', error);
+      }
     }
 
-    compute()
-  }, [])
-
-  const handleAddSlot = () => {
+    compute();
+  }, [cachedUserData]);
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleAddSlot = useCallback(() => {
     if (newSlot.day && newSlot.startTime && newSlot.endTime && newSlot.classId && newSlot.className) {
       setTimetable([...timetable, newSlot as TimeSlot])
       setNewSlot({})
     }
-  }
+  }, [newSlot, timetable]);
 
-  const handleDeleteSlot = (index: number) => {
+  const handleDeleteSlot = useCallback((index: number) => {
     setTimetable(timetable.filter((_, i) => i !== index))
-  }
+  }, [timetable]);
 
-  const handleUpdateSlot = (index: number, field: string, value: string) => {
+  const handleUpdateSlot = useCallback((index: number, field: string, value: string) => {
     const updated = [...timetable]
     updated[index] = { ...updated[index], [field]: value }
     setTimetable(updated)
-  }
+  }, [timetable]);
 
   // Calculate hours completed (mock: 5 hours per class per week)
   const hoursCompleted = classes.length * 5
@@ -107,94 +125,138 @@ const TeacherOverView = () => {
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+  const renderCell = (field: string, value: string, idx: number, type = "text") => (
+  <td className="py-2 px-3">
+    {editingTimetable ? (
+      <Input
+        type={type}
+        list={field === "day" ? "days" : undefined}
+        value={value}
+        onChange={(e) =>
+          handleUpdateSlot(idx, field, e.target.value)
+        }
+        className="h-8"
+        placeholder={field === "className" ? "Class name" : undefined}
+      />
+    ) : (
+      value
+    )}
+  </td>
+);
+
+const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) => {
+  e.stopPropagation();
+  setClasses(classes.map(cls => 
+    cls.id === classId ? { ...cls, isCompleted: true } : cls
+  ));
+}
+
   return (
     <div className="p-2 sm:p-4 md:p-6 bg-background min-h-screen">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">Teacher Dashboard</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Welcome back! Here's your teaching overview.</p>
-        </div>
 
-        {/* Stats Cards */}
+       {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          {/* Classes Card */}
-          <Card className="bg-gradient-to-br from-blue-600 to-blue-400 text-white">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-blue-100 text-sm font-medium">Total Classes</p>
-                  <p className="text-3xl font-bold mt-2">{classes.length}</p>
-                </div>
-                <div className="bg-white/20 p-3 rounded-lg">
-                  <Users className="h-6 w-6" />
-                </div>
-              </div>
-              <p className="text-blue-100 text-xs mt-4">
-                Total Students: {classes.reduce((sum, c) => sum + c.studentCount, 0)}
-              </p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Total Classes"
+            value={classes.length}
+            subtitle={`Total Students: ${classes.reduce((sum, c) => sum + c.studentCount, 0)}`}
+            gradient="from-blue-600 to-blue-400"
+            icon={<Users className="h-6 w-6" />}
+            colorText="text-blue-100"
+          />
 
-          {/* Hours Completed Card */}
-          <Card className="bg-gradient-to-br from-purple-600 to-purple-400 text-white">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-purple-100 text-sm font-medium">Hours Completed</p>
-                  <p className="text-3xl font-bold mt-2">{hoursCompleted}h</p>
-                </div>
-                <div className="bg-white/20 p-3 rounded-lg">
-                  <Clock className="h-6 w-6" />
-                </div>
-              </div>
-              <p className="text-purple-100 text-xs mt-4">This week</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Hours Completed"
+            value={`${hoursCompleted}h`}
+            subtitle="This week"
+            gradient="from-purple-600 to-purple-400"
+            icon={<Clock className="h-6 w-6" />}
+            colorText="text-purple-100"
+          />
 
-          {/* Revenue Generated Card */}
-          <Card className="bg-gradient-to-br from-green-600 to-green-400 text-white">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-green-100 text-sm font-medium">Revenue Generated</p>
-                  <p className="text-3xl font-bold mt-2">₹{revenueGenerated}</p>
-                </div>
-                <div className="bg-white/20 p-3 rounded-lg">
-                  <IndianRupee className="h-6 w-6" />
-                </div>
-              </div>
-              <p className="text-green-100 text-xs mt-4">This month</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Compensation Generated"
+            value={`₹${revenueGenerated}`}
+            subtitle="This month"
+            gradient="from-green-600 to-green-400"
+            icon={<IndianRupee className="h-6 w-6" />}
+            colorText="text-green-100"
+          />
         </div>
 
         {/* Classes Overview */}
         <div className="mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">Your Classes</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-            {classes.map((cls) => (
-              <button key={cls.id} onClick={() => navigate(`/teacher/class/${cls.id}`)} className="text-left hover:scale-105 transition">
-                <Card className="w-full h-full hover:shadow-lg">
-                  <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold mb-3">{cls.name}</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Students</span>
-                        <span className="text-sm font-medium">{cls.studentCount}</span>
+          <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">
+            Your Classes
+          </h2>
+          {classes.length ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+              {classes.map((cls) => (
+                <button
+                  key={cls.id}
+                  onClick={() => navigate(`/teacher/class/${cls.id}`)}
+                  className="text-left hover:scale-105 transition"
+                >
+                  <Card className="w-full h-full hover:shadow-lg">
+                    <CardContent className="p-4">
+                      <div className="flex gap-1 justify-between items-start">
+                        <h3 className="text-lg font-semibold mb-3">
+                          {cls.name}
+                        </h3>
+                        <DropdownButton
+                          options={[
+                            {
+                              id: 'mark-completed',
+                              label: 'Mark as Completed',
+                              icon: <CheckCircle2 className="h-4 w-4" />,
+                              onClick: (e: React.MouseEvent<HTMLDivElement>) => markAsCompleted(e, cls.id),
+                            },
+                          ]}
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Attendance</span>
-                        <span className={`text-sm font-medium ${cls.attendance >= 80 ? 'text-green-600' : cls.attendance >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {cls.attendance}%
-                        </span>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            Students
+                          </span>
+                          <span className="text-sm font-medium">
+                            {cls.studentCount}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            Attendance
+                          </span>
+                          <span
+                            className={`text-sm font-medium ${
+                              cls.attendance >= 80
+                                ? "text-green-600"
+                                : cls.attendance >= 60
+                                ? "text-yellow-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {cls.attendance}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className={`text-sm ${cls.isCompleted ? "text-green-600" : "text-yellow-600"}`}>
+                            {cls.isCompleted ? "Completed" : "In Progress"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </button>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <Card className="flex justify-center items-center w-full">
+              <CardHeader>No classes assigned yet.</CardHeader>
+            </Card>
+          )}
         </div>
 
         {/* Timetable */}
@@ -202,7 +264,7 @@ const TeacherOverView = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Weekly Timetable</CardTitle>
             <Button
-              variant={editingTimetable ? 'destructive' : 'outline'}
+              variant={editingTimetable ? "destructive" : "outline"}
               size="sm"
               onClick={() => setEditingTimetable(!editingTimetable)}
             >
@@ -226,67 +288,34 @@ const TeacherOverView = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2 px-3 font-semibold">Day</th>
-                    <th className="text-left py-2 px-3 font-semibold">Start Time</th>
-                    <th className="text-left py-2 px-3 font-semibold">End Time</th>
-                    <th className="text-left py-2 px-3 font-semibold">Class</th>
-                    {editingTimetable && <th className="text-left py-2 px-3 font-semibold">Action</th>}
+                    {["Day", "Start Time", "End Time", "Class"].map((h) => (
+                      <th key={h} className="text-left py-2 px-3 font-semibold">
+                        {h}
+                      </th>
+                    ))}
+                    {editingTimetable && (
+                      <th className="text-left py-2 px-3 font-semibold">
+                        Action
+                      </th>
+                    )}
                   </tr>
                 </thead>
+
                 <tbody>
                   {timetable.map((slot, idx) => (
                     <tr key={idx} className="border-b hover:bg-muted/50">
-                      <td className="py-2 px-3">
-                        {editingTimetable ? (
-                          <Input
-                            list="days"
-                            value={slot.day}
-                            onChange={(e) => handleUpdateSlot(idx, 'day', e.target.value)}
-                            className="h-8"
-                          />
-                        ) : (
-                          slot.day
-                        )}
-                      </td>
-                      <td className="py-2 px-3">
-                        {editingTimetable ? (
-                          <Input
-                            type="time"
-                            value={slot.startTime}
-                            onChange={(e) => handleUpdateSlot(idx, 'startTime', e.target.value)}
-                            className="h-8"
-                          />
-                        ) : (
-                          slot.startTime
-                        )}
-                      </td>
-                      <td className="py-2 px-3">
-                        {editingTimetable ? (
-                          <Input
-                            type="time"
-                            value={slot.endTime}
-                            onChange={(e) => handleUpdateSlot(idx, 'endTime', e.target.value)}
-                            className="h-8"
-                          />
-                        ) : (
-                          slot.endTime
-                        )}
-                      </td>
-                      <td className="py-2 px-3">
-                        {editingTimetable ? (
-                          <Input
-                            value={slot.className}
-                            onChange={(e) => handleUpdateSlot(idx, 'className', e.target.value)}
-                            placeholder="Class name"
-                            className="h-8"
-                          />
-                        ) : (
-                          slot.className
-                        )}
-                      </td>
+                      {renderCell("day", slot.day, idx)}
+                      {renderCell("startTime", slot.startTime, idx, "time")}
+                      {renderCell("endTime", slot.endTime, idx, "time")}
+                      {renderCell("className", slot.className, idx)}
+
                       {editingTimetable && (
                         <td className="py-2 px-3">
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteSlot(idx)}>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteSlot(idx)}
+                          >
                             Delete
                           </Button>
                         </td>
@@ -300,11 +329,16 @@ const TeacherOverView = () => {
             {/* Add New Slot Form */}
             {editingTimetable && (
               <div className="p-2 sm:p-4 bg-muted rounded-lg space-y-2 sm:space-y-3">
-                <p className="font-semibold text-xs sm:text-sm">Add New Class Slot</p>
+                <p className="font-semibold text-xs sm:text-sm">
+                  Add New Class Slot
+                </p>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-2">
                   <select
-                    value={newSlot.day || ''}
-                    onChange={(e) => setNewSlot({ ...newSlot, day: e.target.value })}
+                    value={newSlot.day || ""}
+                    onChange={(e) =>
+                      setNewSlot({ ...newSlot, day: e.target.value })
+                    }
                     className="h-8 px-2 border rounded text-sm"
                   >
                     <option value="">Select Day</option>
@@ -314,24 +348,28 @@ const TeacherOverView = () => {
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="time"
-                    value={newSlot.startTime || ''}
-                    onChange={(e) => setNewSlot({ ...newSlot, startTime: e.target.value })}
-                    className="h-8 px-2 border rounded text-sm"
-                  />
-                  <input
-                    type="time"
-                    value={newSlot.endTime || ''}
-                    onChange={(e) => setNewSlot({ ...newSlot, endTime: e.target.value })}
-                    className="h-8 px-2 border rounded text-sm"
-                  />
+
+                  {["startTime", "endTime"].map((field) => (
+                    <input
+                      key={field}
+                      type="time"
+                      value={newSlot[field as keyof typeof newSlot] || ""}
+                      onChange={(e) =>
+                        setNewSlot({ ...newSlot, [field]: e.target.value })
+                      }
+                      className="h-8 px-2 border rounded text-sm"
+                    />
+                  ))}
+
                   <Input
-                    value={newSlot.className || ''}
-                    onChange={(e) => setNewSlot({ ...newSlot, className: e.target.value })}
+                    value={newSlot.className || ""}
+                    onChange={(e) =>
+                      setNewSlot({ ...newSlot, className: e.target.value })
+                    }
                     placeholder="Class name"
                     className="h-8"
                   />
+
                   <Button size="sm" onClick={handleAddSlot}>
                     <Save className="h-4 w-4 mr-2" />
                     Add
@@ -350,7 +388,7 @@ const TeacherOverView = () => {
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
-export default TeacherOverView
+export default memo(TeacherOverView);
