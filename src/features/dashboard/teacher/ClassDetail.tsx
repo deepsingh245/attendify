@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { AttendanceRecord, Class as ClassInterface, Student, Teacher } from "@/firebase/interfaces/user.interface";
-import GenericTable from '@/components/shared/GenericTable';
+import GenericTable, { Column } from '@/components/shared/GenericTable';
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -10,8 +10,7 @@ import { getClassById, getTeacherById } from "@/firebase/teachersUtils";
 import { getStudentsInClass } from "@/firebase/studentUtils";
 import {getAttendanceForClassOnDate, markAttendanceForMultipleStudents } from "@/firebase/AttendanceUtils";
 import GlobalLoader from "@/components/ui/global-loader";
-import SelectAttendanceMethodModal from "@/components/modals/selectAttendanceMethodModal";
-import { Edit } from "lucide-react";
+import { Edit, X } from "lucide-react";
 
 // table row shape for precomputed rows
 type ClassTableRow = {
@@ -240,6 +239,122 @@ const ClassDetail = () => {
   { label: "On Leave", value: onLeaveToday, color: "text-amber-600" },
 ];
 
+const getAttendanceClass = (val?: string) => {
+  switch (val) {
+    case "Present":
+      return "text-green-600 dark:text-green-400";
+    case "Absent":
+      return "text-rose-600 dark:text-rose-400";
+    case "Leave":
+      return "text-amber-600";
+    default:
+      return "text-muted-foreground";
+  }
+};
+
+const getTodayStatus = (id: string) =>
+  attendanceRecords.find(a => a.studentId === id && a.date === todayKey)?.status ||
+  attendanceStats.find(a => a.studentId === id && a.date === todayKey)?.status;
+
+const AttendanceButton = ({
+  id,
+  type,
+}: { id: string; type: "Present" | "Absent" | "Leave" }) => {
+  const active = getTodayStatus(id) === type;
+  return (
+    <Button
+      size="sm"
+      variant={active ? "default" : "outline"}
+      onClick={() => handleAttendanceChange(id, type)}
+      className="w-8 h-8 p-0"
+    >
+      {type[0]}
+    </Button>
+  );
+};
+
+const columns = [
+  {
+    key: "rollNo",
+    header: "Roll No",
+    width: "80px",
+    render: (r: ClassTableRow) => (
+      <div className="font-medium ml-3">{r.rollNo}</div>
+    ),
+  },
+  {
+    key: "name",   
+    width: "200px",
+    header: "Name",
+    render: (r: ClassTableRow) => r.name ?? "",
+  },
+  {
+    key: "profilePictureUrl",
+    width: "80px",
+    header: "Picture",
+    render: (r: ClassTableRow) =>
+      r.profilePictureUrl ? (
+        <img
+          src={r.profilePictureUrl}
+          alt={String(r.name ?? "")}
+          className="h-12 w-12 rounded-full"
+        />
+      ) : (
+        <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-[9px] text-gray-500">
+          No Image
+        </div>
+      ),
+  },
+  {
+    key: "attendanceToday",
+    header: "Attendance (Today)",
+    width: "150px",
+    render: (r: ClassTableRow) => (
+      <div className={`${getAttendanceClass(r.attendanceToday)}`}>
+        {r.attendanceToday}
+      </div>
+    ),
+  },
+  {
+    key: "leaveToday",
+    width: "80px",
+    header: "Leave",
+    align: 'center',
+    render: (r: ClassTableRow) => r.leaveToday,
+  },
+  {
+    key: "edit",
+    width: "200px",
+    header: "Edit",
+    align: 'center',
+    render: (r: ClassTableRow) =>
+      editingStudentId === r.id ? (
+        <div className="flex justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AttendanceButton id={r.id} type="Present" />
+            <AttendanceButton id={r.id} type="Absent" />
+            <AttendanceButton id={r.id} type="Leave" />
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="w-fit p-1 px-2 bg-red-600"
+            onClick={() => setEditingStudentId(null)}
+          >
+            <X />
+          </Button>
+        </div>
+      ) : (
+        <Button variant='ghost' size='sm' onClick={() => setEditingStudentId(r.id)}>
+        <Edit
+          className="cursor-pointer h-5 w-5 text-center justify-self-center"
+          onClick={() => setEditingStudentId(r.id)}
+        />
+        </Button>
+      ),
+  },
+];
+
   return (
     <div className="p-6 flex flex-col">
       <GlobalLoader show={saving} message="Saving attendance..." />
@@ -278,77 +393,7 @@ const ClassDetail = () => {
           caption={"Today's Attendance Overview"}
           pageSize={10}
           data={tableRows}
-          columns={[
-            { key: 'rollNo', header: 'Roll No', width: '80px', render: (r: ClassTableRow) => <div className="font-medium">{r.rollNo}</div> },
-            { key: 'name', header: 'Name', render: (r: ClassTableRow) => String(r.name ?? '') },
-            { key: 'profilePictureUrl', header: 'Picture', render: (r: ClassTableRow) => (
-                r.profilePictureUrl ? (
-                  <img src={r.profilePictureUrl} alt={String(r.name ?? '')} className="h-12 w-12 rounded-full" />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-center text-[9px]"><span className="text-gray-500">No Image</span></div>
-                )
-              ) },
-            { key: 'attendanceToday', header: 'Attendance (Today)', render: (r: ClassTableRow) => {
-                const attendanceVal = r.attendanceToday;
-                const cls =
-                  attendanceVal === 'Present'
-                    ? 'text-green-600 dark:text-green-400'
-                    : attendanceVal === 'Absent'
-                    ? 'text-rose-600 dark:text-rose-400'
-                    : attendanceVal === 'Leave'
-                    ? 'text-amber-600'
-                    : 'text-muted-foreground';
-                return <div className={cls}>{attendanceVal}</div>
-              } },
-            { key: 'leaveToday', header: 'Leave', render: (r: ClassTableRow) => r.leaveToday, align: 'center' },
-            { key: 'edit', header: 'Edit', render: (r: ClassTableRow) => (
-              editingStudentId === r.id ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant={
-                      (attendanceRecords.find((a) => a.studentId === r.id && a.date === todayKey)?.status || 
-                       attendanceStats.find((a) => a.studentId === r.id && a.date === todayKey)?.status) === 'Present'
-                        ? 'default'
-                        : 'outline'
-                    }
-                    onClick={() => handleAttendanceChange(r.id, 'Present')}
-                    className="w-8 h-8 p-0"
-                  >
-                    P
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={
-                      (attendanceRecords.find((a) => a.studentId === r.id && a.date === todayKey)?.status || 
-                       attendanceStats.find((a) => a.studentId === r.id && a.date === todayKey)?.status) === 'Absent'
-                        ? 'default'
-                        : 'outline'
-                    }
-                    onClick={() => handleAttendanceChange(r.id, 'Absent')}
-                    className="w-8 h-8 p-0"
-                  >
-                    A
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={
-                      (attendanceRecords.find((a) => a.studentId === r.id && a.date === todayKey)?.status || 
-                       attendanceStats.find((a) => a.studentId === r.id && a.date === todayKey)?.status) === 'Leave'
-                        ? 'default'
-                        : 'outline'
-                    }
-                    onClick={() => handleAttendanceChange(r.id, 'Leave')}
-                    className="w-8 h-8 p-0"
-                  >
-                    L
-                  </Button>
-                </div>
-              ) : (
-                <Edit className="cursor-pointer h-5 w-5 text-center" onClick={() => setEditingStudentId(r.id)} />
-              )
-            ), align: 'center' },
-          ]}
+          columns={columns as Column<ClassTableRow>[]}
         />
 
         {showSaveButton && (

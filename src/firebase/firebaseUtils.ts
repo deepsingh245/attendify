@@ -27,6 +27,7 @@ import {
   writeBatch,
   WithFieldValue,
   DocumentData,
+  FieldValue,
 } from 'firebase/firestore';
 
 
@@ -92,24 +93,24 @@ export async function deleteDocument(collectionName: string, docId: string) {
 }
 
 // Subcollection functions
-export async function addSubcollection(parentCollection: string, parentId: string, subCollection: string, data: any) {
-  return addDoc(collection(db, parentCollection, parentId, subCollection), data);
+export async function addSubcollection<T>(parentCollection: string, parentId: string, subCollection: string, data: T) {
+  return addDoc(collection(db, parentCollection, parentId, subCollection), data as WithFieldValue<DocumentData>);
 }
 
 export async function getSubcollection(parentCollection: string, parentId: string, subCollection: string) {
   return getDocs(collection(db, parentCollection, parentId, subCollection));
 }
 
-export async function setSubDocument(parentCollection: string, parentId: string, subCollection: string, docId: string, data: any) {
-  return setDoc(doc(db, parentCollection, parentId, subCollection, docId), data);
+export async function setSubDocument<T>(parentCollection: string, parentId: string, subCollection: string, docId: string, data: T) {
+  return setDoc(doc(db, parentCollection, parentId, subCollection, docId), data as WithFieldValue<DocumentData>);
 }
 
 export async function getSubDocument(parentCollection: string, parentId: string, subCollection: string, docId: string) {
   return getDoc(doc(db, parentCollection, parentId, subCollection, docId));
 }
 
-export async function updateSubDocument(parentCollection: string, parentId: string, subCollection: string, docId: string, data: any) {
-  return updateDoc(doc(db, parentCollection, parentId, subCollection, docId), data);
+export async function updateSubDocument<T>(parentCollection: string, parentId: string, subCollection: string, docId: string, data: T) {
+  return updateDoc(doc(db, parentCollection, parentId, subCollection, docId), data as WithFieldValue<DocumentData>);
 }
 
 export async function deleteSubDocument(parentCollection: string, parentId: string, subCollection: string, docId: string) {
@@ -117,7 +118,7 @@ export async function deleteSubDocument(parentCollection: string, parentId: stri
 }
 
 // Query example
-export async function queryCollection(collectionName: string, field: string, value: any, op: WhereFilterOp = '==') {
+export async function queryCollection(collectionName: string, field: string, value: FieldValue, op: WhereFilterOp = '==') {
   const q = query(collection(db, collectionName), where(field, op, value));
   return getDocs(q);
 }
@@ -133,7 +134,7 @@ export async function queryCollection(collectionName: string, field: string, val
  */
 export const buildQuery = (
   collectionName: string,
-  filters: { field: string; op: WhereFilterOp; value: any }[] = [],
+  filters: { field: string; op: WhereFilterOp; value: FieldValue }[] = [],
   order?: { field: string; direction?: "asc" | "desc" },
   limitCount?: number
 ) => {

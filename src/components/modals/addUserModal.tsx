@@ -124,35 +124,20 @@ const   AddUserModal: React.FC<GenericFormModalProps> = ({
                   className="min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm"
                 />
               ) : f.type === "select" ? (
-                <Select>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select a fruit" />
+                <Select value={values[f.name] ?? ""} onValueChange={(v) => handleChange(f.name, v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={f.placeholder || "Select an option"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectLabel>Fruits</SelectLabel>
-                      <SelectItem value="apple">Apple</SelectItem>
-                      <SelectItem value="banana">Banana</SelectItem>
-                      <SelectItem value="blueberry">Blueberry</SelectItem>
-                      <SelectItem value="grapes">Grapes</SelectItem>
-                      <SelectItem value="pineapple">Pineapple</SelectItem>
+                      <SelectLabel>{f.label}</SelectLabel>
+                      {f.options?.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               ) : (
-                // <select
-                //   id={f.name}
-                //   value={values[f.name] ?? ""}
-                //   onChange={(e) => handleChange(f.name, e.target.value)}
-                //   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm"
-                // >
-                //   <option value="">Select</option>
-                //   {f.options?.map((opt) => (
-                //     <option key={opt.value} value={opt.value}>
-                //       {opt.label}
-                //     </option>
-                //   ))}
-                // </select>
                 <Input
                   id={f.name}
                   type={

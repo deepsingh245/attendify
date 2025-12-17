@@ -10,7 +10,7 @@ import {
   TableCaption,
 } from '@/components/ui/table'
 
-type Column<T> = {
+export type Column<T> = {
   key: string
   header: React.ReactNode
   width?: string

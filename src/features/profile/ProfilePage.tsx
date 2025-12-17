@@ -7,14 +7,18 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Teacher, Student, Admin } from '@/firebase/interfaces/user.interface'
 import { Upload, MapPin, Phone, Mail, Edit2, Save, X } from 'lucide-react'
-
+import { dangerToast, getCachedUser } from '@/lib/utils'
+import { updateTeacherProfile } from '@/firebase/teachersUtils'
+import { uploadImageToSupabase } from '@/firebase/supabase.utils'
+import GlobalLoader from '@/components/ui/global-loader'
+import { BUCKET_URL } from '@/constants/constants'
 type CurrentUser = Teacher | Student | Admin | null
 
 interface ProfileFormData {
   phone: string
   additionalEmail: string
   address: string
-  profilePictureUrl: string
+  profilePictureUrl: File | string
 }
 
 type UserRole = 'admin' | 'teacher' | 'student'
@@ -29,28 +33,26 @@ const ProfilePage = () => {
   const navigate = useNavigate()
   const [currentUser, setCurrentUser] = useState<CurrentUser>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [localProfilePictureUrl, setLocalProfilePictureUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>({
     phone: '',
     additionalEmail: '',
     address: '',
     profilePictureUrl: '',
-  })
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const raw = localStorage.getItem('user')
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as CurrentUser
-        setCurrentUser(parsed)
-        setFormData({
-          phone: parsed?.phone || '',
-          additionalEmail: parsed?.additionalEmail || '',
-          address: parsed?.address || '',
-          profilePictureUrl: parsed?.profilePictureUrl || '',
-        })
-      } catch {
-        navigate('/login')
-      }
+    const cachedUser = getCachedUser();
+    if (cachedUser) {
+      const parsed = cachedUser as unknown as CurrentUser;
+      setCurrentUser(parsed)
+      setFormData({
+        phone: parsed?.phone || '',
+        additionalEmail: parsed?.additionalEmail || '',
+        address: parsed?.address || '',
+        profilePictureUrl: parsed?.profilePictureUrl || '',
+      })
     } else {
       navigate('/login')
     }
@@ -63,20 +65,63 @@ const ProfilePage = () => {
 
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    console.log("🚀 ~ handleProfilePictureChange ~ file:", file)
     if (file) {
       const reader = new FileReader()
       reader.onload = () => {
-        setFormData({ ...formData, profilePictureUrl: reader.result as string })
+        setLocalProfilePictureUrl(reader.result as string);
+        setFormData({ ...formData, profilePictureUrl: file })
       }
       reader.readAsDataURL(file)
     }
   }
 
-  const handleSave = async () => {
-    // TODO: Save to Firebase
-    console.log('Saving profile:', formData)
-    setIsEditing(false)
+const handleSave = async () => {
+  setLoading(true);
+
+  try {
+    if (!currentUser) {
+      dangerToast("No current user to update profile for.");
+      return;
+    }
+
+    const updatedData = { ...formData };
+
+    // 1. Upload profile image if provided
+    if (formData.profilePictureUrl instanceof File) {
+      try {
+        const uploadResult = await uploadImageToSupabase(
+          formData.profilePictureUrl,
+          `profiles/${currentUser.id}`
+        );
+
+        if (!uploadResult) {
+          dangerToast("Failed to upload profile picture.");
+          return; // ❌ stop execution, do NOT update firestore
+        }
+
+        updatedData.profilePictureUrl = uploadResult.fullPath;
+      } catch (err) {
+        console.error("Error uploading profile picture:", err);
+        dangerToast("Error uploading profile picture. Please try again.");
+        return; // ❌ stop execution, do NOT update firestore
+      }
+    }
+
+    // 2. Update teacher profile only if upload succeeded
+    await updateTeacherProfile(currentUser.id, updatedData as Partial<Teacher>);
+
+    console.log("Saving profile:", updatedData);
+    setIsEditing(false);
+
+  } catch (err) {
+    console.error("Error saving profile:", err);
+    dangerToast("Error saving profile. Please try again.");
+  } finally {
+    setLoading(false);
   }
+};
+
 
   const handleCancel = () => {
     setIsEditing(false)
@@ -117,6 +162,7 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background p-2 sm:p-4">
+      <GlobalLoader show={loading} />
       <div className="max-w-4xl mx-auto">
         {/* Header with gradient background */}
         <div className={`bg-gradient-to-r ${bgGradient} rounded-lg p-3 sm:p-6 mb-4 sm:mb-6 text-white shadow-lg`}>
@@ -124,7 +170,7 @@ const ProfilePage = () => {
             {/* Profile Picture */}
             <div className="relative">
               <Avatar className="h-24 w-24 border-4 border-white">
-                <AvatarImage src={formData.profilePictureUrl} alt={currentUser.userName} />
+                <AvatarImage src={localProfilePictureUrl || (typeof formData.profilePictureUrl === 'string' ? formData.profilePictureUrl : '')} alt={currentUser.userName} />
                 <AvatarFallback className="bg-white text-gray-900 text-lg font-bold">
                   {String(currentUser.userName || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
