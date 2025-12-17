@@ -13,6 +13,9 @@ import GenericTable from '@/components/shared/GenericTable'
 import { ChartBar } from '@/components/charts/BarChart'
 import { useParams } from 'react-router-dom'
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Mail, Hash, School, CheckCircle, XCircle, User } from 'lucide-react'
+
 export default function AdminStudentDetail() {
   const { id } = useParams<{ id: string }>();
   // const navigate = useNavigate();
@@ -83,7 +86,6 @@ export default function AdminStudentDetail() {
   // const handleDelete = async () => {
   //   if (!id) return
   //   if (!confirm('Delete this student permanently? This action cannot be undone.')) return
-
   //   setSaving(true)
   //   try {
   //     await deleteDocument(Collections.STUDENTS, id)
@@ -122,7 +124,14 @@ export default function AdminStudentDetail() {
 
   /** Table columns */
   const attendanceColumns = [
-    { key: 'date', header: 'Date', render: (r: AttendanceRecord) => r.date },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (r: AttendanceRecord) => {
+        const d = new Date(Number(r.date) || r.date)
+        return `${d.getDate()} (${d.toLocaleString('default', { weekday: 'long' })})`
+      }
+    },
     { key: 'status', header: 'Status', render: (r: AttendanceRecord) => r.status },
   ]
 
@@ -166,29 +175,70 @@ export default function AdminStudentDetail() {
       {!loading && student && (
         <div className="flex flex-col gap-6">
           {/* Student Info Card */}
-          <Card className="col-span-1">
-            <CardHeader>
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold">{student.name}</h2>
-                <p className="text-sm text-muted-foreground">{student.email}</p>
+          <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-card to-muted/20">
+            <CardHeader className="pb-4 border-b bg-muted/30">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <Avatar className="h-20 w-20 border-4 border-background shadow-sm">
+                  <AvatarImage src={student.profilePictureUrl} alt={student.name} />
+                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                    {student.name.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center justify-between w-full">
+                    <h2 className="text-2xl font-bold tracking-tight">{student.name}</h2>
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${student.isActive
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-red-50 text-red-700 border-red-200"
+                        }`}
+                    >
+                      {student.isActive ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <XCircle className="w-4 h-4" />
+                      )}
+                      {student.isActive ? "Active" : "Suspended"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="w-4 h-4" />
+                    <span className="text-sm">{student.email}</span>
+                  </div>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div>
-                Roll No: <span className="font-medium">{student.rollNo}</span>
+            <CardContent className="pt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border">
+                <div className="p-2 rounded-md bg-primary/10 text-primary">
+                  <Hash className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Roll Number</p>
+                  <p className="font-semibold mt-0.5">{student.rollNo}</p>
+                </div>
               </div>
-              <div>
-                Class:{" "}
-                <span className="font-medium">{student.classId || "—"}</span>
+              
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border">
+                <div className="p-2 rounded-md bg-primary/10 text-primary">
+                  <School className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Class</p>
+                  <p className="font-semibold mt-0.5">{student.classId || "Not Assigned"}</p>
+                </div>
               </div>
-              <div>
-                Status:{" "}
-                <span
-                  className={`font-medium ${student.isActive ? "text-green-600" : "text-red-600"
-                    }`}
-                >
-                  {student.isActive ? "Active" : "Suspended"}
-                </span>
+
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border">
+                <div className="p-2 rounded-md bg-primary/10 text-primary">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">User ID</p>
+                  <p className="font-mono text-sm font-medium mt-0.5 truncate max-w-[150px]" title={student.id}>
+                    {student.id}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -1,6 +1,7 @@
 import { Collections } from "@/constants/constants";
-import { getCollection, getDocument, queryCollection } from "./firebaseUtils";
+import { getCollection, getDocument, queryCollection, setDocument, signup } from "./firebaseUtils";
 import { Student } from "./interfaces/user.interface";
+import { FieldValue } from "firebase/firestore";
 
 // Helper to safely retrieve document data with error handling
 export const safeGetDocumentData = async <T>(collectionName: string, docId: string): Promise<T | null> => {
@@ -33,10 +34,53 @@ export const getAllStudents = async (): Promise<Student[]> => {
 // Get all students in a class
 export const getStudentsInClass = async (classId: string): Promise<Student[]> => {
   try {
-    const allStudents = await queryCollection(Collections.STUDENTS, "classId", classId);
+    const allStudents = await queryCollection(Collections.STUDENTS, "classId", classId as unknown as FieldValue);
     return allStudents.docs.map(doc => doc.data() as Student);
   } catch (error) {
     console.error(`Error fetching students for class ${classId}:`, error);
     return [];
+  }
+};
+
+// Add a new student with Firebase Authentication
+export const addStudent = async (studentData: Partial<Student> & { password: string }): Promise<void> => {
+  try {
+    // Validate required fields for auth
+    if (!studentData.email || !studentData.password) {
+      throw new Error("Email and password are required to create a student account");
+    }
+
+    // Step 1: Create Firebase Authentication user
+    const userCredential = await signup(studentData.email, studentData.password);
+    const uid = userCredential.user.uid;
+
+    // Step 2: Prepare student data with the UID as the document ID
+    const { password, ...studentDataWithoutPassword } = studentData; // Remove password from Firestore data
+    const newStudent = {
+      ...studentDataWithoutPassword,
+      id: uid, // Use Firebase Auth UID as the student ID
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isActive: true,
+      role: 'student' as const,
+    };
+    
+    // Step 3: Create Firestore document with the same ID as the Auth UID
+    await setDocument(Collections.STUDENTS, uid, newStudent);
+    
+    console.log(`✅ Student created successfully with ID: ${uid}`);
+  } catch (error: any) {
+    console.error("Error adding student:", error);
+    
+    // Provide more specific error messages
+    if (error?.code === 'auth/email-already-in-use') {
+      throw new Error('This email is already registered');
+    } else if (error?.code === 'auth/weak-password') {
+      throw new Error('Password is too weak. Please use at least 6 characters');
+    } else if (error?.code === 'auth/invalid-email') {
+      throw new Error('Invalid email format');
+    }
+    
+    throw error;
   }
 };
