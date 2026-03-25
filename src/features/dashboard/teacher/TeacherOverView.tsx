@@ -202,7 +202,7 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
                     <CardContent className="p-4">
                       <div className="flex gap-1 justify-between items-start">
                         <h3 className="text-lg font-semibold mb-3">
-                          {cls.name}
+                          {cls.className}
                         </h3>
                         <DropdownButton
                           options={[

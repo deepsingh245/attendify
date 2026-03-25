@@ -1,142 +1,177 @@
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { getAllClasses } from "@/firebase/adminUtils";
-import { Class, Teacher } from "@/firebase/interfaces/user.interface";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getTeacherById } from "@/firebase/teachersUtils";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useMemo } from "react";
+import { getAllClasses, addClass } from "@/firebase/adminUtils";
+import { Class, Teacher, AttendanceRecord } from "@/firebase/interfaces/user.interface";
 import GlobalLoader from "@/components/ui/global-loader";
-import { Users, User } from "lucide-react";
+import { dangerToast, successToast } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Download, Plus, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ClassCard } from "./ClassCard";
+import AddClassModal from "./AddClassModal";
+import { getAllTeachers } from "@/firebase/teachersUtils";
+import { getAllAttendance } from "@/firebase/AttendanceUtils";
 
-const ClassList = () => {
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [classMeta, setClassMeta] = useState<
-    Record<string, { teacher?: Teacher | null }>
-  >({});
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+const grades = ['All Grades', 'Grade 1', 'Grade 2', 'Grade 4', 'Grade 5', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
 
-  useEffect(() => {
-    // Fetch or compute admin dashboard data here
-    const fetchAdminData = async () => {
-      setLoading(true);
-      try {
-        const data = await getAllClasses();
-        setClasses(data);
-
-        // For each class, fetch only the assigned teacher to display in the overview
-        const metas = await Promise.all(
-          data.map(async (c) => {
-            const teacher = c.teacherId
-              ? await getTeacherById(c.teacherId)
-              : null;
-            return { id: c.id, teacher };
-          })
-        );
-
-        const metaMap: Record<string, { teacher?: Teacher | null }> = {};
-        metas.forEach((m) => {
-          metaMap[m.id] = { teacher: m.teacher };
-        });
-
-        setClassMeta(metaMap);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAdminData();
-  }, []);
-
-  const renderClassCard = (cls: Class) => {
-    const meta = classMeta[cls.id];
-    const initials = cls.className
-      .split(' ')
-      .map((s) => s.charAt(0))
-      .slice(0, 2)
-      .join('')
-      .toUpperCase() || 'CL';
-
-    return (
-      <Card key={cls.id} className="p-2 flex flex-col justify-between">
-        {/* Header */}
-        <CardHeader className="flex items-start justify-between gap-3 p-3 flex-row">
-          <div className="flex items-center justify-start gap-3">
-            <div className="h-12 w-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-              {initials}
-            </div>
-            <div>
-              <div className="font-medium text-lg">{cls.className}</div>
-              {cls.id && (
-                <div className="mt-1">
-                  <span className="inline-block text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground">
-                    {cls.id}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-           <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span>{cls.students.length} Students</span>
-            </div>
-        </CardHeader>
-
-        {/* Content */}
-        <CardContent className="flex-1 pt-3">
-          <div className="flex flex-col gap-3 text-sm">
-            <div className="border-t pt-3">
-              <div className="text-xs text-muted-foreground mb-1">Assigned Teacher</div>
-              {meta?.teacher ? (
-                <button
-                  className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-                  onClick={() =>
-                    navigate(`/admin/teachers/${meta.teacher?.id}`)
-                  }
-                >
-                  <User className="h-4 w-4" />
-                  {meta.teacher.name}
-                </button>
-              ) : (
-                <span className="text-xs text-muted-foreground italic">Unassigned</span>
-              )}
-            </div>
-          </div>
-        </CardContent>
-
-        {/* Footer */}
-        <CardFooter>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate(`/admin/classes/${cls.id}`)}
-          >
-            View Details
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  };
-
-  return (
-    <>
-      <GlobalLoader show={loading} message="Loading Classes..." />
-      <div className="flex flex-col gap-2 sm:gap-3">
-        <div className="p-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-          <h1 className="text-xl sm:text-2xl font-bold">Classes</h1>
-          <Button variant="secondary" className="bg-primary text-xs sm:text-sm w-full sm:w-auto" onClick={() => {}}>
-            Add Class
-          </Button>
-        </div>
-        {classes.length === 0 ? (
-          <div className="text-xs sm:text-sm text-muted-foreground py-4">No classes found.</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-            {classes.map(renderClassCard)}
-          </div>
-        )}
-      </div>
-    </>
-  );
+type AugmentedClass = Class & {
+    teacher: Teacher | null;
+    attRate: number;
+    status: 'Excellent' | 'Good' | 'Watch' | 'Warning' | 'Critical';
+    room: string;
 };
 
+export const ClassList: React.FC = () => {
+    const [allClasses, setAllClasses] = useState<AugmentedClass[]>([]);
+    const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState('All Grades');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [classes, teachers, attendance] = await Promise.all([
+                getAllClasses(),
+                getAllTeachers(),
+                getAllAttendance(),
+            ]);
+            
+            setAllTeachers(teachers);
+
+            const augmentedClasses = classes.map(c => {
+                const teacher = teachers.find(t => t.id === c.teacherId) || null;
+                const classAttendance = attendance.filter(a => a.classId === c.id);
+                const present = classAttendance.filter(a => a.status === 'Present' || a.status === 'Late').length;
+                const total = classAttendance.length;
+                const attRate = total > 0 ? Math.round((present / total) * 100) : 100;
+
+                let status: AugmentedClass['status'] = 'Excellent';
+                if (attRate < 75) status = 'Critical';
+                else if (attRate < 85) status = 'Warning';
+                else if (attRate < 95) status = 'Good';
+                
+                return {
+                    ...c,
+                    teacher,
+                    attRate,
+                    status,
+                    room: `Room ${Math.floor(Math.random() * 20) + 1}`, // Dummy room data
+                }
+            });
+            setAllClasses(augmentedClasses);
+        } catch (error) {
+            console.error("Error fetching class data:", error);
+            dangerToast("Failed to load class data.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+    
+    const addClassHandler = async (values: { className: string, teacherId: string, room: string }) => {
+        setLoading(true);
+        try {
+            await addClass({
+                className: values.className,
+                teacherId: values.teacherId,
+                students: [], // Initially no students
+            });
+            successToast('Class added successfully!');
+            fetchData(); // Refetch all data
+        } catch (error) {
+            if (error instanceof Error) {
+                dangerToast(`Failed to add class: ${error.message}`);
+            } else {
+                dangerToast('An unexpected error occurred.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const filteredClasses = useMemo(() => {
+        let classes = allClasses;
+
+        if (activeFilter !== 'All Grades') {
+            classes = classes.filter(c => c.className.startsWith(activeFilter));
+        }
+
+        if (searchQuery) {
+            classes = classes.filter(c =>
+                c.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (c.teacher?.userName || '').toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        return classes;
+    }, [searchQuery, activeFilter, allClasses]);
+
+    return (
+        <div className="p-4 sm:p-6 space-y-6">
+            <GlobalLoader show={loading} />
+            {/* Page Header */}
+            <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Classes</h1>
+                    <p className="text-sm text-slate-400 mt-1">
+                        {allClasses.length} active classes · {allClasses.reduce((sum, c) => sum + c.students.length, 0)} students enrolled · Academic Year 2025–26
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                    </Button>
+                    <Button onClick={() => setIsAddModalOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Class
+                    </Button>
+                </div>
+            </header>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Input 
+                        placeholder="Search classes or teachers..."
+                        className="pl-10"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                    {grades.map(grade => (
+                        <Button 
+                            key={grade}
+                            variant={activeFilter === grade ? "default" : "secondary"}
+                            onClick={() => setActiveFilter(grade)}
+                            className="shrink-0"
+                        >
+                            {grade}
+                        </Button>
+                    ))}
+                </div>
+            </div>
+            
+            {/* Classes Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredClasses.map(classData => (
+                    <ClassCard key={classData.id} classData={classData} />
+                ))}
+            </div>
+
+            <AddClassModal 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                onSubmit={addClassHandler}
+                teachers={allTeachers}
+            />
+        </div>
+    );
+};
 export default ClassList;

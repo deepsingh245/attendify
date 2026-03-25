@@ -7,7 +7,7 @@
 export interface AttendanceRecord {
     studentId: string;
     date: string;                // e.g. "2025-10-27"
-    status: 'Present' | 'Absent' | 'Leave';
+    status: 'Present' | 'Absent' | 'Leave' | 'Late';
     classId: string;
 }
 

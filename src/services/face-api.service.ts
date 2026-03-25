@@ -19,7 +19,7 @@ export async function loadLabeledDescriptors(
   bucketUrl: string,
 ): Promise<LabeledDescriptorMap> {
   const labeledFaces = students.map((student, i) => ({
-    label: student.name,
+    label: student.userName,
     url: `${bucketUrl}${student.id}/face${i + 1}.jpg`,
     id: student.id,
   }));

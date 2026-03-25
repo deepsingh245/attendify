@@ -185,7 +185,7 @@ const ClassDetail = () => {
     return {
       id: s.id,
       rollNo: s.rollNo,
-      name: s.name,
+      name: s.userName || "Unknown",
       profilePictureUrl: s.profilePictureUrl,
       attendanceToday,
       leaveToday,    };
@@ -384,7 +384,7 @@ const columns = [
           <FaceRecognition
             studentsList={studentsInClass.map((s) => ({
               id: s.id,
-              name: s.name,
+              name: s.userName || "Unknown",
             }))}
             onRecognize={onRecognize}
           />

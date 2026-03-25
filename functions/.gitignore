@@ -1,0 +1,48 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Firebase cache
+.firebase/
+.firebase-cache/
+
+# Node modules
+node_modules/
+
+# Build output (TypeScript)
+lib/
+dist/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Env files (VERY IMPORTANT)
+.env
+.env.local
+.env.*.local
+
+# Runtime config (if exported)
+.runtimeconfig.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Optional: coverage
+coverage/
+
+# Optional: emulator data
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

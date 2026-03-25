@@ -96,16 +96,18 @@ const LoginPage: React.FC = () => {
         // Cache selected role if user chose one on the form
         if (selectedRole) localStorage.setItem("attendify_role", selectedRole);
 
-        // Navigate according to selectedRole when present, otherwise router will
-        // resolve role from token/collection and redirect the user.
-        if (selectedRole === "admin") navigate("/admin");
-        else if (selectedRole === "teacher") navigate("/teacher");
-        else if (selectedRole === "student") navigate("/student");
-        else navigate("/");
+        // Give Firebase auth time to update before navigating
+        setTimeout(() => {
+          // Navigate according to selectedRole when present, otherwise router will
+          // resolve role from token/collection and redirect the user.
+          if (selectedRole === "admin") navigate("/admin");
+          else if (selectedRole === "teacher") navigate("/teacher");
+          else if (selectedRole === "student") navigate("/student");
+          else navigate("/");
+        }, 500);
       } catch (err: unknown) {
         const message = getAuthErrorMessage(err);
-        dangerToast(message)
-      } finally {
+        dangerToast(message);
         setLoading(false);
       }
     })();
@@ -229,7 +231,7 @@ const LoginPage: React.FC = () => {
                     })}
                   </div>
 
-                  <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                  {/*  <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                     <p className="text-center text-xs text-slate-500 mb-4">Or try the platform without an account</p>
                     <Button 
                       variant="outline" 
@@ -239,7 +241,7 @@ const LoginPage: React.FC = () => {
                     >
                       {loading ? 'Signing in...' : 'Continue as Guest'}
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
               ) : (
                 <div className="p-6 sm:p-8 animate-in fade-in slide-in-from-right-8 duration-500">

@@ -40,11 +40,9 @@ export default function AppRoutes() {
   const auth = getAuth();
   
 useEffect(() => {
-  setResolvingUser(true); // <--- mark loading immediately
+  setResolvingUser(true);
 
   const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-    console.log("Auth changed:", firebaseUser);
-
     if (!firebaseUser) {
       setUser(null);
       setResolvingUser(false);
