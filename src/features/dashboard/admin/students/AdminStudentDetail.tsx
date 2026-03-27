@@ -7,11 +7,12 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import GenericTable from '@/components/shared/GenericTable';
 import { ChartBar } from '@/components/charts/BarChart';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Mail, Hash, School, Calendar, CheckCircle, ArrowLeft, BarChart2 } from 'lucide-react';
+import { Mail, Hash, School, Calendar, CheckCircle, XCircle, ArrowLeft, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import GlobalLoader from '@/components/ui/global-loader';
 import StatCard from '@/components/shared/StatCard';
+import { EditStudentModal } from './EditStudentModal';
 
 export default function AdminStudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -139,7 +140,12 @@ export default function AdminStudentDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">Edit Student</Button>
+          <EditStudentModal
+            student={student}
+            onSuccess={(updatedStudent) => setStudent(updatedStudent)}
+          >
+            <Button variant="outline">Edit Student</Button>
+          </EditStudentModal>
           <Button variant={student.isActive ? "destructive" : "default"}>
             {student.isActive ? "Suspend" : "Activate"}
           </Button>

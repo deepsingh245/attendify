@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Collections } from "@/constants/constants";
 import { getCollection, getDocument, buildQuery, updateDocument } from "./firebaseUtils";
 import { Class, Teacher } from "./interfaces/user.interface";
-import { getDoc, getDocs } from "firebase/firestore";
+import { getDocs } from "firebase/firestore";
 import { signup } from "./firebaseUtils";
 
 export const getTeacherById = async (teacherId: string): Promise<Teacher | null> => {
@@ -67,7 +68,7 @@ export const addTeacher = async (teacherData: Partial<Teacher> & { password: str
     const uid = userCredential.user.uid;
 
     // Step 2: Prepare teacher data with the UID as the document ID
-    const { password, ...teacherDataWithoutPassword } = teacherData; // Remove password from Firestore data
+    const { ...teacherDataWithoutPassword } = teacherData;
     const newTeacher = {
       ...teacherDataWithoutPassword,
       id: uid, // Use Firebase Auth UID as the teacher ID

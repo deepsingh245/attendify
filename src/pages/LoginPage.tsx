@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-// firebase auth helpers are provided via '@/firebase/firebaseUtils'
-// logo removed to avoid image import typing issues; using text title instead
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Shield, GraduationCap, User, ArrowLeft, CheckCircle2, Sparkles } from 'lucide-react';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import {
@@ -16,8 +13,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { login } from '@/firebase/firebaseUtils';
-import { getAuthErrorMessage } from '@/constants/constants';
+import { getAuthErrorMessage, LOCAL_STORAGE_KEYS } from '@/constants/constants';
 import { dangerToast } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
+
 
 type Role = 'admin' | 'teacher' | 'student' | 'guest' | null;
 
@@ -64,18 +63,17 @@ const LoginPage: React.FC = () => {
     };
 
     const cred = role ? creds[role] : creds["guest"];
-    if (role) localStorage.setItem("attendify_role", role);
+    if (role) localStorage.setItem(LOCAL_STORAGE_KEYS.ROLE, role);
 
     try {
-      try {
-        const user = await login(cred.email, cred.password);
-        console.log("🚀 ~ guestLogin ~ user:", user);
-        // Don't navigate here - let AppRoutes handle it via onAuthStateChanged
-      } catch (err: unknown) {
-        const message = getAuthErrorMessage(err);
-        dangerToast(message);
-        setLoading(false);
-      }
+      await login(cred.email, cred.password).then((user) => {
+        if (!user) {
+          setShowUserNotFoundDialog(true);
+        }
+        console.log("🚀 ~ guestLogin ~ role:", role);
+        window.dispatchEvent(new Event('attendifyRoleChanged'));
+        // AppRoutes will automatically redirect when currentUser is set
+      });
     } catch (err: unknown) {
       const message = getAuthErrorMessage(err);
       dangerToast(message);
@@ -92,19 +90,10 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     (async () => {
       try {
+        if (selectedRole) localStorage.setItem(LOCAL_STORAGE_KEYS.ROLE, selectedRole);
+        window.dispatchEvent(new Event('attendifyRoleChanged'));
         await login(email, password);
-        // Cache selected role if user chose one on the form
-        if (selectedRole) localStorage.setItem("attendify_role", selectedRole);
-
-        // Give Firebase auth time to update before navigating
-        setTimeout(() => {
-          // Navigate according to selectedRole when present, otherwise router will
-          // resolve role from token/collection and redirect the user.
-          if (selectedRole === "admin") navigate("/admin");
-          else if (selectedRole === "teacher") navigate("/teacher");
-          else if (selectedRole === "student") navigate("/student");
-          else navigate("/");
-        }, 500);
+        // AppRoutes will automatically redirect when currentUser is set
       } catch (err: unknown) {
         const message = getAuthErrorMessage(err);
         dangerToast(message);

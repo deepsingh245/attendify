@@ -27,17 +27,23 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function ChartBar({
-  chartData, 
-  onBarClick, 
-  title = "Attendance Overview", 
-  description = "Monthly attendance performance. Click a bar to view records."
+  chartData,
+  onBarClick,
+  title = "Attendance Overview",
+  description = "Monthly attendance performance. Click a bar to view records.",
+  xKey = "month",
+  yKey = "desktop",
 }: {
-  chartData?: { month: string; desktop: number }[], 
-  onBarClick?: (month: string, index: number) => void,
+  chartData?: Array<Record<string, string | number>>,
+  onBarClick?: (xValue: string, index: number) => void,
   title?: string,
-  description?: string
+  description?: string,
+  xKey?: string,
+  yKey?: string,
 }) {
   const data = chartData ?? []
+  const xDataKey = xKey || "month"
+  const yDataKey = yKey || "desktop"
 
   // Compute barSize to keep bars slim: cap at 48px, reduce as more bars appear
   const barSize = 40
@@ -57,28 +63,28 @@ export function ChartBar({
               margin={{ top: 0, left: 0, right: 0, bottom: 0 }}
             >
               <XAxis
-                dataKey="month"
+                dataKey={xDataKey}
                 tickLine={false}
                 tickMargin={16}
                 axisLine={false}
                 tick={{ fill: '#64748B', fontSize: 12 }}
-                tickFormatter={(value) => String(value).slice(0, 3)}
+                tickFormatter={(value) => String(value).slice(0, 8)}
               />
               <ChartTooltip
                 cursor={{ fill: '#1E293B', opacity: 0.4 }}
                 content={<ChartTooltipContent hideLabel />}
               />
               <Bar 
-                dataKey="desktop" 
+                dataKey={yDataKey} 
                 fill="#34D399" 
                 radius={[4, 4, 4, 4]} 
                 barSize={barSize} 
                 className="cursor-pointer"
                 background={{ fill: '#1E1E24', radius: [4, 4, 4, 4] }}
                 onClick={(payload: unknown, index: number) => {
-                  const p = payload as { payload?: { month?: string }; month?: string } | undefined
-                  const month = p?.payload?.month ?? p?.month
-                  if (onBarClick && month) onBarClick(month, index)
+                  const p = payload as { payload?: Record<string, unknown>; [key: string]: unknown } | undefined
+                  const xValue = p?.payload?.[xDataKey] as string | undefined ?? (p?.[xDataKey] as string | undefined)
+                  if (onBarClick && xValue) onBarClick(xValue, index)
                 }}
               />
             </BarChart>

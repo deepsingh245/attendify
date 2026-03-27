@@ -42,6 +42,21 @@ export const getStudentsInClass = async (classId: string): Promise<Student[]> =>
   }
 };
 
+// Update a student
+export const updateStudent = async (studentId: string, updateData: Partial<Student>): Promise<void> => {
+  try {
+    const { updateDocument } = await import('./firebaseUtils');
+    await updateDocument(Collections.STUDENTS, studentId, {
+      ...updateData,
+      updatedAt: new Date().toISOString(),
+    });
+    console.log(`✅ Student ${studentId} updated successfully`);
+  } catch (error) {
+    console.error(`Error updating student ${studentId}:`, error);
+    throw error;
+  }
+};
+
 // Add a new student with Firebase Authentication
 export const addStudent = async (studentData: Partial<Student> & { password: string }): Promise<string> => {
   try {
