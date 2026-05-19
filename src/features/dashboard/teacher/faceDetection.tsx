@@ -1,11 +1,9 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useImperativeHandle } from "react";
 import * as faceapi from "face-api.js";
 // import { supabase } from "@/firebase/supabase.utils";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
 import GlobalLoader from "@/components/ui/global-loader";
 import { BUCKET_URL } from "@/constants/constants";
 import {
@@ -18,11 +16,30 @@ import {
 // import { supabase } from "@/firebase/supabase.utils";
 
 
-const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; onRecognize?: (ids: string[]) => void }> = ({ studentsList, onRecognize }) => {
+const FaceRecognition = React.forwardRef<FaceRecognitionRef, FaceRecognitionProps>(({ studentsList, onRecognize }, ref) => {
+  useImperativeHandle(ref, () => ({
+    detectFaces: async () => {
+      if (!imageRef.current) {
+        setError("No image uploaded to detect faces.");
+        return;
+      }
+      setGlobalLoading(true);
+      try {
+        await ensureModelsLoaded();
+        const detectionsRaw = await detectAllFacesFromImage(imageRef.current as HTMLImageElement);
+        drawDetections(detectionsRaw as unknown as DetectionWithDescriptor[]);
+      } catch (err) {
+        console.error('Failed to detect faces', err);
+        setError(String((err as Error)?.message ?? String(err)));
+      } finally {
+        setGlobalLoading(false);
+      }
+    },
+  }));
   // don't show loading on mount; models load lazily on upload
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [detectedNames, setDetectedNames] = useState<string[]>([]);
+  const [, setDetectedNames] = useState<string[]>([]);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -103,9 +120,12 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
     });
     // unique ids
     const uniqueIds = Array.from(new Set(ids));
+    const detectedCount = uniqueIds.length;
+    const undetectedCount = detections.length - detectedCount; // Total detections minus recognized faces
+
     setDetectedNames(names);
-    console.log("🚀 ~ FaceRecognition ~ names:", names, "ids:", uniqueIds);
-    if (onRecognize && uniqueIds.length) onRecognize(uniqueIds);
+    console.log("🚀 ~ FaceRecognition ~ names:", names, "ids:", uniqueIds, "detected:", detectedCount, "undetected:", undetectedCount);
+    if (onRecognize) onRecognize(uniqueIds, detectedCount, undetectedCount);
   }, [onRecognize]);
 
   // ensure canvas matches rendered image size when image loads
@@ -188,55 +208,72 @@ const FaceRecognition: React.FC<{ studentsList: { id: string; name: string }[]; 
   }, [drawDetections, ensureModelsLoaded, studentsList]);
 
 
-  return (
-    <Card className="p-2 sm:p-4 md:p-6 space-y-2 sm:space-y-4">
-      <GlobalLoader show={globalLoading} message="Recognizing..." />
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-        <h2 className="text-base sm:text-lg font-semibold">Face Recognition Attendance</h2>
-        {loading ? (
-          <div className="flex items-center gap-2">
-            <Spinner />
-            <span className="text-xs sm:text-sm text-muted-foreground">Loading models...</span>
-          </div>
-        ) : null}
-      </div>
+  const handleDrag = useCallback(function (e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
 
+  const handleDrop = useCallback(function (e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleUpload({ target: { files: e.dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>);
+    }
+  }, [handleUpload]);
+
+  const [dragActive, setDragActive] = useState(false);
+
+  return (
+    <div className="flex flex-col items-center justify-center w-full h-full">
+      <GlobalLoader show={globalLoading} message="Recognizing..." />
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 items-start">
-        <div className="md:col-span-1">
-          <Label htmlFor="face-file" className="mb-2 text-xs sm:text-sm">Upload image</Label>
-          <Input id="face-file" type="file" accept="image/*" onChange={handleUpload} disabled={loading} className="cursor-pointer text-xs sm:text-sm" />
-          <div className="mt-3 sm:mt-4">
-            <h4 className="text-xs sm:text-sm font-medium">Detected</h4>
-            <ul className="mt-2 list-disc list-inside space-y-1">
-              {detectedNames.length === 0 && <li className="text-sm text-muted-foreground">No detections yet</li>}
-              {detectedNames.map((name, i) => (
-                <li key={i} className="text-sm">{name}</li>
-              ))}
-            </ul>
-          </div>
+      <Label
+        htmlFor="dropzone-file"
+        className={`flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600 ${
+          dragActive ? "border-blue-600" : "border-gray-300"
+        }`}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+          <svg className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L7 9m3-3 3 3"/>
+          </svg>
+          <p className="mb-2 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG (MAX. 10MB)</p>
         </div>
-
-        <div className="md:col-span-2">
-          <div className="relative bg-muted rounded-md overflow-hidden" style={{ paddingTop: '56.25%' }}>
-            {/* container that keeps aspect ratio */}
-              {/* always render the <img> so ref is attached; show placeholder overlay when no src */}
-              <img ref={imageRef} src={imageSrc ?? undefined} onLoad={handleImageLoad} className="absolute inset-0 w-full h-full" />
-              {!imageSrc && (
-                <div className="absolute inset-0 w-full h-full flex items-center justify-center text-muted-foreground">No image uploaded</div>
-              )}
-            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
-          </div>
+        <Input id="dropzone-file" type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={loading} />
+      </Label>
+      {imageSrc && (
+        <div className="mt-4 relative w-full h-[200px] border border-gray-300 rounded-lg flex items-center justify-center">
+          <img ref={imageRef} src={imageSrc} onLoad={handleImageLoad} className="absolute inset-0 w-full h-full object-contain" alt="Preview" />
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
         </div>
-      </div>
-    </Card>
+      )}
+    </div>
   );
-};
+});
 
 export default FaceRecognition;
+
+export interface FaceRecognitionRef {
+  detectFaces: () => Promise<void>;
+}
+
+export interface FaceRecognitionProps {
+  studentsList: { id: string; name: string }[];
+  onRecognize: (ids: string[], detectedCount: number, undetectedCount: number) => void;
+}

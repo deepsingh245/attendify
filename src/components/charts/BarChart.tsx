@@ -1,6 +1,6 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
+import { Bar, BarChart, XAxis } from "recharts"
 
 import {
   Card,
@@ -26,62 +26,71 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartBar({chartData, onBarClick}: {chartData?: { month: string; desktop: number }[], onBarClick?: (month: string, index: number) => void}) {
+export function ChartBar({
+  chartData,
+  onBarClick,
+  title = "Attendance Overview",
+  description = "Monthly attendance performance. Click a bar to view records.",
+  xKey = "month",
+  yKey = "desktop",
+}: {
+  chartData?: Array<Record<string, string | number>>,
+  onBarClick?: (xValue: string, index: number) => void,
+  title?: string,
+  description?: string,
+  xKey?: string,
+  yKey?: string,
+}) {
   const data = chartData ?? []
+  const xDataKey = xKey || "month"
+  const yDataKey = yKey || "desktop"
 
-  // Determine a sensible minimum width so bars stay slim and we can scroll horizontally when needed.
-  const BAR_BASE_WIDTH = 48 // px per bar base
-  const minWidth = Math.max(600, (data.length || 6) * BAR_BASE_WIDTH)
   // Compute barSize to keep bars slim: cap at 48px, reduce as more bars appear
-  const barSize = Math.max(8, Math.min(48, Math.floor(BAR_BASE_WIDTH * 0.8)))
+  const barSize = 40
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Attendance</CardTitle>
-        <CardDescription>Monthly overview</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        {/* horizontal scroll wrapper: inner div provides minWidth to allow scrolling when many bars */}
-        <div className="w-full overflow-x-auto">
-          <div style={{ minWidth }}>
-            <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
-              {/* BarChart will be placed inside ResponsiveContainer by ChartContainer */}
-              <BarChart accessibilityLayer data={data} barCategoryGap={"20%"} barGap={6}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => String(value).slice(0, 3)}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Bar dataKey="desktop" fill="hsl(var(--primary))" radius={4} barSize={barSize} className="cursor-pointer"
-                  // Recharts onClick handler: payload contains row under payload.payload
-                  onClick={(payload: unknown, index: number) => {
-                    // use a lightweight cast to access Recharts payload fields
-                    const p = payload as { payload?: { month?: string }; month?: string } | undefined
-                    const month = p?.payload?.month ?? p?.month
-                    if (onBarClick && month) onBarClick(month, index)
-                  }}
-                />
-              </BarChart>
-            </ChartContainer>
-          </div>
+        <div className="w-full h-60">
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <BarChart 
+              accessibilityLayer 
+              data={data} 
+              margin={{ top: 0, left: 0, right: 0, bottom: 0 }}
+            >
+              <XAxis
+                dataKey={xDataKey}
+                tickLine={false}
+                tickMargin={16}
+                axisLine={false}
+                tick={{ fill: '#64748B', fontSize: 12 }}
+                tickFormatter={(value) => String(value).slice(0, 8)}
+              />
+              <ChartTooltip
+                cursor={{ fill: '#1E293B', opacity: 0.4 }}
+                content={<ChartTooltipContent hideLabel />}
+              />
+              <Bar 
+                dataKey={yDataKey} 
+                fill="#34D399" 
+                radius={[4, 4, 4, 4]} 
+                barSize={barSize} 
+                className="cursor-pointer"
+                background={{ fill: '#1E1E24', radius: [4, 4, 4, 4] }}
+                onClick={(payload: unknown, index: number) => {
+                  const p = payload as { payload?: Record<string, unknown>; [key: string]: unknown } | undefined
+                  const xValue = p?.payload?.[xDataKey] as string | undefined ?? (p?.[xDataKey] as string | undefined)
+                  if (onBarClick && xValue) onBarClick(xValue, index)
+                }}
+              />
+            </BarChart>
+          </ChartContainer>
         </div>
       </CardContent>
-      {/* <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 leading-none font-medium">
-          Trending overview <TrendingUp className="h-4 w-4" />
-        </div>
-        <div className="text-muted-foreground leading-none">
-          Showing attendance percentage per month
-        </div>
-      </CardFooter> */}
     </Card>
   )
 }

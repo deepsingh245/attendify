@@ -1,5 +1,5 @@
 import { Collections } from "@/constants/constants";
-import { getCollection, getDocument } from "./firebaseUtils";
+import { getCollection, getDocument, addDocument } from "./firebaseUtils";
 import { Admin, Class } from "./interfaces/user.interface";
 
 
@@ -19,6 +19,18 @@ export const getAllClasses = async () => {
     return classesCollection.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Class[];
   } catch (error) {
     console.error("Error fetching all classes:", error);
+    throw error;
+  }
+};
+
+// Add a new class
+export const addClass = async (classData: Omit<Class, 'id'>): Promise<string> => {
+  try {
+    const docRef = await addDocument(Collections.CLASSES, classData);
+    console.log(`✅ Class created successfully with ID: ${docRef.id}`);
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding class:", error);
     throw error;
   }
 };

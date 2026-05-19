@@ -32,6 +32,7 @@ export default function AppRoutes() {
     Teacher | Student | Admin | null
   >(null);
   const [resolvingUser, setResolvingUser] = useState(true);
+  const [localStorageRole, setLocalStorageRole] = useState(getCachedUserRole());
 
   const setUser = (user: Admin | Teacher | Student | null) => {
     localStorage.setItem("user", JSON.stringify(user));
@@ -40,10 +41,8 @@ export default function AppRoutes() {
   const auth = getAuth();
   
 useEffect(() => {
-  setResolvingUser(true); // <--- mark loading immediately
-
   const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-    console.log("Auth changed:", firebaseUser);
+    setResolvingUser(true);
 
     if (!firebaseUser) {
       setUser(null);
@@ -79,12 +78,20 @@ useEffect(() => {
     }
   });
 
-  return () => unsub();
+  // Listen for custom event to trigger re-evaluation of role-based navigation
+  const handleRoleChange = () => {
+    setLocalStorageRole(getCachedUserRole());
+  };
+  window.addEventListener('attendifyRoleChanged', handleRoleChange);
+
+  return () => {
+    unsub();
+    window.removeEventListener('attendifyRoleChanged', handleRoleChange);
+  };
 }, [auth]);
 
-
   function RoleBasedHome() {
-    const roleClaim = getCachedUserRole();
+    const roleClaim = localStorageRole;
     if (resolvingUser) return null;
     if (!currentUser) return <Navigate to="/login" replace />;
     // If user has role field, use it. Teacher objects may be used for admin as well depending on data.
@@ -93,15 +100,15 @@ useEffect(() => {
     if (roleClaim === "teacher") return <Navigate to="/teacher" replace />;
     if (roleClaim === "student") return <Navigate to="/student" replace />;
 
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return (
     <>
       <GlobalLoader show={resolvingUser} />
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignUp />} />
+      <Route path="/login" element={currentUser ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/signup" element={currentUser ? <Navigate to="/" replace /> : <SignUp />} />
 
       <Route element={<AppLayout />}>
         <Route path="/" element={<RoleBasedHome />} />

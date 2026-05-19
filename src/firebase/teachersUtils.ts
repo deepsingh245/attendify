@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Collections } from "@/constants/constants";
 import { getCollection, getDocument, buildQuery, updateDocument } from "./firebaseUtils";
 import { Class, Teacher } from "./interfaces/user.interface";
-import { getDoc, getDocs } from "firebase/firestore";
+import { getDocs } from "firebase/firestore";
+import { signup } from "./firebaseUtils";
 
 export const getTeacherById = async (teacherId: string): Promise<Teacher | null> => {
   const teacherDoc = await getDocument(Collections.TEACHERS, teacherId);
@@ -53,6 +55,50 @@ export const getClassById = async (classId: string): Promise<Class | null> => {
   return classDoc.data() as Class | null;
 }
 
+// Add a new teacher with Firebase Authentication
+export const addTeacher = async (teacherData: Partial<Teacher> & { password: string }): Promise<string> => {
+  try {
+    // Validate required fields for auth
+    if (!teacherData.email || !teacherData.password) {
+      throw new Error("Email and password are required to create a teacher account");
+    }
+
+    // Step 1: Create Firebase Authentication user
+    const userCredential = await signup(teacherData.email, teacherData.password);
+    const uid = userCredential.user.uid;
+
+    // Step 2: Prepare teacher data with the UID as the document ID
+    const { ...teacherDataWithoutPassword } = teacherData;
+    const newTeacher = {
+      ...teacherDataWithoutPassword,
+      id: uid, // Use Firebase Auth UID as the teacher ID
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isActive: true,
+      role: 'teacher' as const,
+    };
+
+    // Step 3: Create Firestore document with the same ID as the Auth UID
+    const { setDocument } = await import('./firebaseUtils');
+    await setDocument(Collections.TEACHERS, uid, newTeacher);
+
+    console.log(`✅ Teacher created successfully with ID: ${uid}`);
+    return uid;
+  } catch (error: any) {
+    console.error("Error adding teacher:", error);
+
+    // Provide more specific error messages
+    if (error?.code === 'auth/email-already-in-use') {
+      throw new Error('This email is already registered');
+    } else if (error?.code === 'auth/weak-password') {
+      throw new Error('Password is too weak. Please use at least 6 characters');
+    } else if (error?.code === 'auth/invalid-email') {
+      throw new Error('Invalid email format');
+    }
+
+    throw error;
+  }
+};
 
 export const updateTeacherProfile = async (
   teacherId: string,

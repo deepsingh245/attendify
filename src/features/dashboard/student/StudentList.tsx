@@ -9,6 +9,7 @@ import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import AddUserModal, { Field } from '@/components/modals/addUserModal';
 import { dangerToast, successToast } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 type StudentStats = {
   id: string;
@@ -227,6 +228,14 @@ const StudentList = () => {
             Overview of all students with attendance and fee payment status
           </p>
         </div>
+        <Button
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-primary hover:bg-primary/90"
+        >
+          Add Student
+        </Button>
+      </div>
+
       <AddUserModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
@@ -236,7 +245,6 @@ const StudentList = () => {
         onSubmit={handleAddStudent}
         submitLabel="Add Student"
       />
-      </div>
 
       <div className="overflow-x-auto -mx-2 sm:mx-0">
         <GenericTable

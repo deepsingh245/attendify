@@ -1,10 +1,10 @@
 
 import { useEffect, useState, useMemo, useCallback, memo } from 'react'
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Users, Clock, Edit2, Save, X, IndianRupee, CheckCircle2 } from 'lucide-react'
+import { Users, Clock, Edit2, Save, X, CheckCircle2 } from 'lucide-react'
 import { getTeacherClasses } from '@/firebase/teachersUtils'
 import { getStudentsInClass } from '@/firebase/studentUtils'
 import { getCachedUser } from '@/lib/utils'
@@ -12,11 +12,12 @@ import { getAttendanceForClassOnDate } from '@/firebase/AttendanceUtils'
 import { Teacher, Class, AttendanceRecord } from '@/firebase/interfaces/user.interface'
 import DropdownButton from '@/components/shared/DropdownButton'
 import StatCard from '@/components/shared/StatCard'
+import { ChartBar } from '@/components/charts/BarChart'
 
 // Dashboard class shape
 type TeacherDashboardClass = {
   id: string
-  name: string
+  className: string
   attendance: number
   studentCount: number
   isCompleted: boolean
@@ -62,6 +63,10 @@ const TeacherOverView = () => {
       if (!cachedUserData) return;
 
       try {
+        const classStatusMap = Object.fromEntries(
+          (cachedUserData.classes || []).map((c) => [c.id, c.completed])
+        )
+
         const teacherClasses = await getTeacherClasses(cachedUserData.id, cachedUserData.classes);
 
         const dashboardClasses = await Promise.all(
@@ -83,9 +88,10 @@ const TeacherOverView = () => {
 
             return {
               id: classItem.id,
-              name: classItem.className || 'Class',
+              className: classItem.className || 'Class',
               attendance: attendancePercent,
               studentCount: studentsInClass.length,
+              isCompleted: classStatusMap[classItem.id] ?? false,
             };
           })
         );
@@ -107,42 +113,59 @@ const TeacherOverView = () => {
     }
   }, [newSlot, timetable]);
 
-  const handleDeleteSlot = useCallback((index: number) => {
-    setTimetable(timetable.filter((_, i) => i !== index))
-  }, [timetable]);
+  const completedClasses = classes.filter((cls) => cls.isCompleted).length
+  const inProgressClasses = classes.length - completedClasses
+  const averageAttendance = classes.length
+    ? Math.round(classes.reduce((sum, cls) => sum + cls.attendance, 0) / classes.length)
+    : 0
 
-  const handleUpdateSlot = useCallback((index: number, field: string, value: string) => {
-    const updated = [...timetable]
-    updated[index] = { ...updated[index], [field]: value }
-    setTimetable(updated)
-  }, [timetable]);
+  const classAttendanceData = useMemo(() => {
+    return classes.map((cls) => ({
+      label: cls.className,
+      value: cls.attendance,
+    }))
+  }, [classes])
 
-  // Calculate hours completed (mock: 5 hours per class per week)
-  const hoursCompleted = classes.length * 5
+  const timetableByDay = useMemo(() => {
+    const dayOrder: Record<string, number> = {
+      Monday: 0,
+      Tuesday: 1,
+      Wednesday: 2,
+      Thursday: 3,
+      Friday: 4,
+      Saturday: 5,
+      Sunday: 6,
+    }
 
-  // Calculate revenue (mock: $50 per hour)
-  const revenueGenerated = hoursCompleted * 50
+    return timetable
+      .slice()
+      .sort((a, b) => {
+        const dayDifference = dayOrder[a.day] - dayOrder[b.day]
+        if (dayDifference !== 0) return dayDifference
+
+        return a.startTime.localeCompare(b.startTime)
+      })
+      .reduce((acc, slot) => {
+        acc[slot.day] = acc[slot.day] || []
+        acc[slot.day].push(slot)
+        return acc
+      }, {} as Record<string, TimeSlot[]>)
+  }, [timetable])
+
+  const now = useMemo(() => new Date(), [])
+  const activeDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()]
+
+  const upcomingClass = useMemo(() => {
+    const todaySlots = timetableByDay[activeDay] ?? []
+    const upcoming = todaySlots
+      .filter((slot) => slot.startTime >= now.toTimeString().slice(0, 5))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+    return upcoming.length ? upcoming[0] : null
+  }, [timetableByDay, activeDay, now])
+  console.log("🚀 ~ TeacherOverView ~ upcomingClass:", upcomingClass)
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-  const renderCell = (field: string, value: string, idx: number, type = "text") => (
-  <td className="py-2 px-3">
-    {editingTimetable ? (
-      <Input
-        type={type}
-        list={field === "day" ? "days" : undefined}
-        value={value}
-        onChange={(e) =>
-          handleUpdateSlot(idx, field, e.target.value)
-        }
-        className="h-8"
-        placeholder={field === "className" ? "Class name" : undefined}
-      />
-    ) : (
-      value
-    )}
-  </td>
-);
 
 const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) => {
   e.stopPropagation();
@@ -153,10 +176,9 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
 
   return (
     <div className="p-2 sm:p-4 md:p-6 bg-background min-h-screen">
-      <div className="max-w-7xl mx-auto">
-
-       {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <div className="max-w-full mx-auto">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <StatCard
             title="Total Classes"
             value={classes.length}
@@ -167,96 +189,149 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
           />
 
           <StatCard
-            title="Hours Completed"
-            value={`${hoursCompleted}h`}
-            subtitle="This week"
-            gradient="from-purple-600 to-purple-400"
+            title="Avg Attendance"
+            value={`${averageAttendance}%`}
+            subtitle="Across all classes"
+            gradient="from-indigo-600 to-indigo-400"
             icon={<Clock className="h-6 w-6" />}
-            colorText="text-purple-100"
+            colorText="text-indigo-100"
           />
 
           <StatCard
-            title="Compensation Generated"
-            value={`₹${revenueGenerated}`}
-            subtitle="This month"
+            title="Completed Classes"
+            value={completedClasses}
+            subtitle="This term"
             gradient="from-green-600 to-green-400"
-            icon={<IndianRupee className="h-6 w-6" />}
+            icon={<CheckCircle2 className="h-6 w-6" />}
             colorText="text-green-100"
+          />
+
+          <StatCard
+            title="In Progress"
+            value={inProgressClasses}
+            subtitle="Active classes"
+            gradient="from-yellow-600 to-amber-400"
+            icon={<Users className="h-6 w-6" />}
+            colorText="text-yellow-100"
           />
         </div>
 
-        {/* Classes Overview */}
-        <div className="mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">
-            Your Classes
-          </h2>
-          {classes.length ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-              {classes.map((cls) => (
-                <button
-                  key={cls.id}
-                  onClick={() => navigate(`/teacher/class/${cls.id}`)}
-                  className="text-left hover:scale-105 transition"
-                >
-                  <Card className="w-full h-full hover:shadow-lg">
-                    <CardContent className="p-4">
-                      <div className="flex gap-1 justify-between items-start">
-                        <h3 className="text-lg font-semibold mb-3">
-                          {cls.name}
-                        </h3>
-                        <DropdownButton
-                          options={[
-                            {
-                              id: 'mark-completed',
-                              label: 'Mark as Completed',
-                              icon: <CheckCircle2 className="h-4 w-4" />,
-                              onClick: (e: React.MouseEvent<HTMLDivElement>) => markAsCompleted(e, cls.id),
-                            },
-                          ]}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            Students
-                          </span>
-                          <span className="text-sm font-medium">
-                            {cls.studentCount}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            Attendance
-                          </span>
-                          <span
-                            className={`text-sm font-medium ${
-                              cls.attendance >= 80
-                                ? "text-green-600"
-                                : cls.attendance >= 60
-                                ? "text-yellow-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {cls.attendance}%
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className={`text-sm ${cls.isCompleted ? "text-green-600" : "text-yellow-600"}`}>
-                            {cls.isCompleted ? "Completed" : "In Progress"}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <Card className="flex justify-center items-center w-full">
-              <CardHeader>No classes assigned yet.</CardHeader>
+        {upcomingClass && (
+          <div className="mb-4 sm:mb-6 flex gap-2 w-full">
+            <Card className="border border-emerald-600 bg-emerald-950/20">
+              <CardHeader>
+                <CardTitle>Next Class</CardTitle>
+                <CardDescription>
+                  {activeDay}, {upcomingClass.startTime} -{" "}
+                  {upcomingClass.endTime}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="font-semibold text-white">
+                  {upcomingClass.className}
+                </p>
+                <p className="text-sm text-slate-300">
+                  Priority: Get attendance ready + share assignment
+                </p>
+              </CardContent>
             </Card>
-          )}
+           
+          </div>
+        )}
+ {/* Classes Overview */}
+            <div className="mb-4 sm:mb-6 w-full">
+              <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">
+                Your Classes
+              </h2>
+              {classes.length ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                  {classes.map((cls) => (
+                    <button
+                      key={cls.id}
+                      data-class-name={cls.className}
+                      onClick={() => navigate(`/teacher/class/${cls.id}`)}
+                      className="text-left hover:scale-105 transition"
+                    >
+                      <Card className="w-full h-full hover:shadow-lg">
+                        <CardContent className="p-4">
+                          <div className="flex gap-1 justify-between items-start">
+                            <h3 className="text-lg font-semibold mb-3">
+                              {cls.className}
+                            </h3>
+                            <DropdownButton
+                              options={[
+                                {
+                                  id: "mark-completed",
+                                  label: "Mark as Completed",
+                                  icon: <CheckCircle2 className="h-4 w-4" />,
+                                  onClick: (
+                                    e: React.MouseEvent<HTMLDivElement>,
+                                  ) => markAsCompleted(e, cls.id),
+                                },
+                              ]}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">
+                                Students
+                              </span>
+                              <span className="text-sm font-medium">
+                                {cls.studentCount}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">
+                                Attendance
+                              </span>
+                              <span
+                                className={`text-sm font-medium ${
+                                  cls.attendance >= 80
+                                    ? "text-green-600"
+                                    : cls.attendance >= 60
+                                      ? "text-yellow-600"
+                                      : "text-red-600"
+                                }`}
+                              >
+                                {cls.attendance}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span
+                                className={`text-sm ${cls.isCompleted ? "text-green-600" : "text-yellow-600"}`}
+                              >
+                                {cls.isCompleted ? "Completed" : "In Progress"}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <Card className="flex justify-center items-center w-full">
+                  <CardHeader>No classes assigned yet.</CardHeader>
+                </Card>
+              )}
+            </div>
+        {/* Class Attendance Chart */}
+        <div className="mb-4 sm:mb-6">
+          <ChartBar
+            title="Class wise Attendance"
+            description="Current attendance percentage for each class."
+            chartData={classAttendanceData}
+            xKey="label"
+            yKey="value"
+            onBarClick={(className: string) => {
+              // optional: scroll to selected class card
+              const element = document.querySelector(
+                `[data-class-name="${className}"]`,
+              );
+              element?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+          />
         </div>
 
         {/* Timetable */}
@@ -271,7 +346,7 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
               {editingTimetable ? (
                 <>
                   <X className="h-4 w-4 mr-2" />
-                  Done
+                  Save
                 </>
               ) : (
                 <>
@@ -283,50 +358,61 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* Timetable Display */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    {["Day", "Start Time", "End Time", "Class"].map((h) => (
-                      <th key={h} className="text-left py-2 px-3 font-semibold">
-                        {h}
-                      </th>
-                    ))}
-                    {editingTimetable && (
-                      <th className="text-left py-2 px-3 font-semibold">
-                        Action
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {timetable.map((slot, idx) => (
-                    <tr key={idx} className="border-b hover:bg-muted/50">
-                      {renderCell("day", slot.day, idx)}
-                      {renderCell("startTime", slot.startTime, idx, "time")}
-                      {renderCell("endTime", slot.endTime, idx, "time")}
-                      {renderCell("className", slot.className, idx)}
-
-                      {editingTimetable && (
-                        <td className="py-2 px-3">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteSlot(idx)}
-                          >
-                            Delete
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-4">
+              {days.map((day) => (
+                <div
+                  key={day}
+                  className="bg-slate-900/60 border border-slate-800 rounded-lg p-3"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-semibold">{day}</h3>
+                    <span className="text-xs text-slate-400">
+                      {(timetableByDay[day] ?? []).length} slot(s)
+                    </span>
+                  </div>
+                  {((timetableByDay[day] ?? []) as TimeSlot[]).length === 0 ? (
+                    <p className="text-xs text-slate-500">No class scheduled</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {(timetableByDay[day] ?? []).map((slot, slotIdx) => (
+                        <li
+                          key={`${day}-${slotIdx}`}
+                          className="border border-slate-800 rounded-md p-2 bg-slate-950/30"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs text-slate-300 font-semibold">
+                              {slot.className}
+                            </p>
+                            <span className="text-xs text-slate-400">
+                              {slot.startTime} - {slot.endTime}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-xs flex items-center justify-between">
+                            <span className="text-emerald-300">
+                              {slot.classId}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const target = classes.find(
+                                  (c) => c.id === slot.classId,
+                                );
+                                if (target)
+                                  navigate(`/teacher/class/${target.id}`);
+                              }}
+                            >
+                              Open
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
             </div>
 
-            {/* Add New Slot Form */}
             {editingTimetable && (
               <div className="p-2 sm:p-4 bg-muted rounded-lg space-y-2 sm:space-y-3">
                 <p className="font-semibold text-xs sm:text-sm">
@@ -370,6 +456,15 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
                     className="h-8"
                   />
 
+                  <Input
+                    value={newSlot.classId || ""}
+                    onChange={(e) =>
+                      setNewSlot({ ...newSlot, classId: e.target.value })
+                    }
+                    placeholder="Class ID"
+                    className="h-8"
+                  />
+
                   <Button size="sm" onClick={handleAddSlot}>
                     <Save className="h-4 w-4 mr-2" />
                     Add
@@ -378,7 +473,6 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
               </div>
             )}
 
-            {/* Datalist for days */}
             <datalist id="days">
               {days.map((d) => (
                 <option key={d} value={d} />

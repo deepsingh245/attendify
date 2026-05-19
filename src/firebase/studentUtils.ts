@@ -42,8 +42,23 @@ export const getStudentsInClass = async (classId: string): Promise<Student[]> =>
   }
 };
 
+// Update a student
+export const updateStudent = async (studentId: string, updateData: Partial<Student>): Promise<void> => {
+  try {
+    const { updateDocument } = await import('./firebaseUtils');
+    await updateDocument(Collections.STUDENTS, studentId, {
+      ...updateData,
+      updatedAt: new Date().toISOString(),
+    });
+    console.log(`✅ Student ${studentId} updated successfully`);
+  } catch (error) {
+    console.error(`Error updating student ${studentId}:`, error);
+    throw error;
+  }
+};
+
 // Add a new student with Firebase Authentication
-export const addStudent = async (studentData: Partial<Student> & { password: string }): Promise<void> => {
+export const addStudent = async (studentData: Partial<Student> & { password: string }): Promise<string> => {
   try {
     // Validate required fields for auth
     if (!studentData.email || !studentData.password) {
@@ -55,7 +70,7 @@ export const addStudent = async (studentData: Partial<Student> & { password: str
     const uid = userCredential.user.uid;
 
     // Step 2: Prepare student data with the UID as the document ID
-    const { password, ...studentDataWithoutPassword } = studentData; // Remove password from Firestore data
+    const { ...studentDataWithoutPassword } = studentData;
     const newStudent = {
       ...studentDataWithoutPassword,
       id: uid, // Use Firebase Auth UID as the student ID
@@ -69,6 +84,8 @@ export const addStudent = async (studentData: Partial<Student> & { password: str
     await setDocument(Collections.STUDENTS, uid, newStudent);
     
     console.log(`✅ Student created successfully with ID: ${uid}`);
+    return uid;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Error adding student:", error);
     

@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "core-sfh",
+    "core": "core-sfh"
+  },
+  "targets": {},
+  "etags": {}
+}
