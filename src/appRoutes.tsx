@@ -23,6 +23,7 @@ import TicketRoute from "./features/dashboard/admin/tickets/TicketRoute";
 import TicketsList from "./features/dashboard/admin/tickets/TicketsList";
 import ProfilePage from "./features/profile/ProfilePage";
 import ClassDetail from "./features/dashboard/teacher/ClassDetail";
+import TeacherClassOverview from "./features/dashboard/teacher/TeacherClassOverview";
 import GlobalLoader from "./components/ui/global-loader";
 import { LOCAL_STORAGE_KEYS } from "@/constants/constants";
 import { getCachedUserRole } from "@/lib/utils";
@@ -146,7 +147,8 @@ useEffect(() => {
           }
         >
           <Route path="/teacher" element={<TeacherOverView />} />
-          <Route path="/teacher/class/:id" element={<ClassDetail />} />
+          <Route path="/teacher/class/:id" element={<TeacherClassOverview />} />
+          <Route path="/teacher/class/:id/attendance" element={<ClassDetail />} />
           <Route path="/teacher/profile" element={<ProfilePage />} />
         </Route>
 

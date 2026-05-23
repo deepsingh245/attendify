@@ -31,7 +31,7 @@ export const AttendanceStatCard: React.FC<AttendanceStatCardProps> = ({
   };
 
   return (
-    <Card className="p-5 flex flex-col gap-3 relative overflow-hidden transition-transform hover:-translate-y-1">
+    <Card className="h-full p-5 flex flex-col gap-3 transition-transform hover:-translate-y-1">
       <div className="flex items-center justify-between">
         <div className="p-2.5 bg-slate-800/50 rounded-lg">{icon}</div>
         {trendValue && (
@@ -42,17 +42,15 @@ export const AttendanceStatCard: React.FC<AttendanceStatCardProps> = ({
           </div>
         )}
       </div>
-      <div>
+      <div className="flex-1">
         <div className="text-3xl font-bold tracking-tight">{value}</div>
         <p className="text-sm text-slate-400">{title}</p>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 p-1">
-        <div className="h-1.5 bg-slate-800/50 rounded-full overflow-hidden">
-          <div
-            className={cn("h-full rounded-full transition-all duration-1000", barColor)}
-            style={{ width: `${barWidth}%` }}
-          />
-        </div>
+      <div className="h-1.5 bg-slate-800/50 rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all duration-1000", barColor)}
+          style={{ width: `${Math.min(100, barWidth || 0)}%` }}
+        />
       </div>
     </Card>
   );

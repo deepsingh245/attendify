@@ -1,5 +1,5 @@
 import { Collections } from "@/constants/constants";
-import { getCollection, getDocument, queryCollection, setDocument, signup } from "./firebaseUtils";
+import { getCollection, getDocument, queryCollection, setDocument, createAuthUser } from "./firebaseUtils";
 import { Student } from "./interfaces/user.interface";
 import { FieldValue } from "firebase/firestore";
 
@@ -46,10 +46,11 @@ export const getStudentsInClass = async (classId: string): Promise<Student[]> =>
 export const updateStudent = async (studentId: string, updateData: Partial<Student>): Promise<void> => {
   try {
     const { updateDocument } = await import('./firebaseUtils');
-    await updateDocument(Collections.STUDENTS, studentId, {
-      ...updateData,
-      updatedAt: new Date().toISOString(),
-    });
+    const payload = Object.fromEntries(
+      Object.entries({ ...updateData, updatedAt: new Date().toISOString() })
+        .filter(([, v]) => v !== undefined)
+    );
+    await updateDocument(Collections.STUDENTS, studentId, payload);
     console.log(`✅ Student ${studentId} updated successfully`);
   } catch (error) {
     console.error(`Error updating student ${studentId}:`, error);
@@ -65,12 +66,11 @@ export const addStudent = async (studentData: Partial<Student> & { password: str
       throw new Error("Email and password are required to create a student account");
     }
 
-    // Step 1: Create Firebase Authentication user
-    const userCredential = await signup(studentData.email, studentData.password);
-    const uid = userCredential.user.uid;
+    // Step 1: Create Firebase Authentication user via secondary app (keeps admin signed in)
+    const uid = await createAuthUser(studentData.email, studentData.password);
 
     // Step 2: Prepare student data with the UID as the document ID
-    const { ...studentDataWithoutPassword } = studentData;
+    const { password: _pw, ...studentDataWithoutPassword } = studentData;
     const newStudent = {
       ...studentDataWithoutPassword,
       id: uid, // Use Firebase Auth UID as the student ID

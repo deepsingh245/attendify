@@ -1,5 +1,5 @@
 import { Collections } from "@/constants/constants";
-import { getCollection, getDocument, addDocument } from "./firebaseUtils";
+import { getCollection, getDocument, addDocument, updateDocument } from "./firebaseUtils";
 import { Admin, Class } from "./interfaces/user.interface";
 
 
@@ -19,6 +19,15 @@ export const getAllClasses = async () => {
     return classesCollection.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Class[];
   } catch (error) {
     console.error("Error fetching all classes:", error);
+    throw error;
+  }
+};
+
+export const updateClass = async (classId: string, updateData: Partial<Class>): Promise<void> => {
+  try {
+    await updateDocument(Collections.CLASSES, classId, updateData);
+  } catch (error) {
+    console.error(`Error updating class ${classId}:`, error);
     throw error;
   }
 };

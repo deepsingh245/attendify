@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getClassById, getTeacherById } from '@/firebase/teachersUtils';
+import { getClassById, getTeacherById, getAllTeachers } from '@/firebase/teachersUtils';
 import { getStudentsInClass } from '@/firebase/studentUtils';
+import { updateClass } from '@/firebase/adminUtils';
 import { Class, Student, Teacher } from '@/firebase/interfaces/user.interface';
 import { getAllAttendance } from '@/firebase/AttendanceUtils';
 import { Button } from '@/components/ui/button';
@@ -28,47 +29,52 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AddUserModal, { Field } from '@/components/modals/addUserModal';
+import { AddStudentModal } from '@/features/dashboard/admin/students/AddStudentModal';
+import { successToast } from '@/lib/utils';
+
 
 export default function AdminClassDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [cls, setCls] = useState<Class | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
   const [avgAttendance, setAvgAttendance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [showEditClass, setShowEditClass] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
       setLoading(true);
       try {
-        const c = await getClassById(id);
+        const [c, teachers] = await Promise.all([getClassById(id), getAllTeachers()]);
         setCls(c);
-        
+        setAllTeachers(teachers);
+
         let fetchedTeacher: Teacher | null = null;
         if (c?.teacherId) {
           fetchedTeacher = await getTeacherById(c.teacherId);
           setTeacher(fetchedTeacher);
         }
-        
+
         const [studs, allAttendance] = await Promise.all([
           getStudentsInClass(id),
-          getAllAttendance()
+          getAllAttendance(),
         ]);
-        
         setStudents(studs);
-        
-        // Calculate attendance
+
         const classAttendance = allAttendance.filter(a => a.classId === id);
         const present = classAttendance.filter(a => a.status === 'Present' || a.status === 'Late').length;
         const total = classAttendance.length;
         setAvgAttendance(total > 0 ? Math.round((present / total) * 100) : 100);
-        
       } catch (err) {
-        console.error("Failed to load class data:", err);
+        console.error('Failed to load class data:', err);
       } finally {
         setLoading(false);
       }
@@ -76,78 +82,115 @@ export default function AdminClassDetail() {
     fetchData();
   }, [id]);
 
+  const handleStudentAdded = async (studentId: string) => {
+    if (!id || !cls) return;
+    await updateClass(id, { students: [...(cls.students || []), studentId] });
+    const updatedStudents = await getStudentsInClass(id);
+    setStudents(updatedStudents);
+    setCls(prev => prev ? { ...prev, students: [...(prev.students || []), studentId] } : prev);
+    successToast('Student added successfully!');
+  };
+
+  const handleEditClass = async (values: Record<string, string>) => {
+    if (!id) return;
+    await updateClass(id, { className: values.className, teacherId: values.teacherId });
+    const [updatedClass, teachers] = await Promise.all([getClassById(id), getAllTeachers()]);
+    setCls(updatedClass);
+    setAllTeachers(teachers);
+    if (updatedClass?.teacherId) {
+      const updatedTeacher = await getTeacherById(updatedClass.teacherId);
+      setTeacher(updatedTeacher);
+    }
+    successToast('Class updated successfully!');
+  };
+
   if (loading) return <GlobalLoader show={true} />;
   if (!cls) return <div className="p-6 text-center text-slate-400">Class not found.</div>;
 
   const filteredStudents = students.filter(s => {
     if (!searchQuery) return true;
     const lowerQ = searchQuery.toLowerCase();
-    return (s.userName || '').toLowerCase().includes(lowerQ) || 
-           (s.email || '').toLowerCase().includes(lowerQ) || 
-           String(s.rollNo || '').toLowerCase().includes(lowerQ);
+    return (
+      (s.userName || '').toLowerCase().includes(lowerQ) ||
+      (s.email || '').toLowerCase().includes(lowerQ) ||
+      String(s.rollNo || '').includes(lowerQ)
+    );
   });
 
-  const getInitials = (name?: string) => {
-    if (!name) return 'ST';
-    return name.substring(0, 2).toUpperCase();
-  };
+  const getInitials = (name?: string) => (name ? name.substring(0, 2).toUpperCase() : 'ST');
+
+  const editClassFields: Field[] = [
+    { name: 'className', label: 'Class Name', type: 'text', placeholder: 'e.g. Grade 10-A', required: true },
+    {
+      name: 'teacherId',
+      label: 'Assigned Teacher',
+      type: 'select',
+      required: true,
+      options: allTeachers.map(t => ({ label: t.userName, value: t.id })),
+    },
+  ];
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate('/admin/classes')}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate('/admin/classes')}
+            className="shrink-0"
+          >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-              {cls.className}
-              <Badge variant="secondary" className="text-xs bg-slate-800">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-white flex flex-wrap items-center gap-2">
+              <span className="truncate">{cls.className}</span>
+              <Badge variant="secondary" className="text-xs bg-slate-800 shrink-0">
                 {cls.id}
               </Badge>
             </h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Academic Year 2025–26
-            </p>
+            <p className="text-sm text-slate-400 mt-1">Academic Year 2025–26</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">Edit Class</Button>
-          <Button>Add Student</Button>
+        <div className="flex items-center gap-2 sm:shrink-0">
+          <Button variant="outline" onClick={() => setShowEditClass(true)}>
+            Edit Class
+          </Button>
+          <Button onClick={() => setShowAddStudent(true)}>Add Student</Button>
         </div>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total Students" 
-          value={students.length} 
-          icon={<Users className="w-5 h-5 text-white" />} 
+        <StatCard
+          title="Total Students"
+          value={students.length}
+          icon={<Users className="w-5 h-5 text-white" />}
           subtitle="Current Roster"
           gradient="from-blue-500 to-indigo-600"
           colorText="text-blue-100"
         />
-        <StatCard 
-          title="Avg. Attendance" 
-          value={`${avgAttendance}%`} 
-          icon={<Calendar className="w-5 h-5 text-white" />} 
-          subtitle={avgAttendance >= 85 ? "Good Standing" : "Needs Attention"}
+        <StatCard
+          title="Avg. Attendance"
+          value={`${avgAttendance}%`}
+          icon={<Calendar className="w-5 h-5 text-white" />}
+          subtitle={avgAttendance >= 85 ? 'Good Standing' : 'Needs Attention'}
           gradient="from-green-500 to-emerald-600"
           colorText="text-green-100"
         />
-        <StatCard 
-          title="Assigned Teacher" 
-          value={teacher ? teacher.userName : "Unassigned"} 
-          icon={<User className="w-5 h-5 text-white" />} 
-          subtitle={teacher ? "Primary" : "Action Required"}
+        <StatCard
+          title="Assigned Teacher"
+          value={teacher ? teacher.userName : 'Unassigned'}
+          icon={<User className="w-5 h-5 text-white" />}
+          subtitle={teacher ? 'Primary' : 'Action Required'}
           gradient="from-purple-500 to-fuchsia-600"
           colorText="text-purple-100"
         />
-        <StatCard 
-          title="Subjects" 
-          value={1} 
-          icon={<BookOpen className="w-5 h-5 text-white" />} 
+        <StatCard
+          title="Subjects"
+          value={1}
+          icon={<BookOpen className="w-5 h-5 text-white" />}
           subtitle="Core Curriculum"
           gradient="from-amber-500 to-orange-600"
           colorText="text-amber-100"
@@ -170,16 +213,16 @@ export default function AdminClassDetail() {
               <div>
                 <div className="text-xs text-slate-400 mb-1">Teacher</div>
                 {teacher ? (
-                  <div 
+                  <div
                     className="flex items-center gap-3 mt-2 p-3 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors"
                     onClick={() => navigate(`/admin/teachers/${teacher.id}`)}
                   >
                     <Avatar className="w-10 h-10 border border-slate-700">
                       <AvatarFallback>{getInitials(teacher.userName)}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <div className="font-medium text-white">{teacher.userName}</div>
-                      <div className="text-xs text-slate-400">{teacher.email}</div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-white truncate">{teacher.userName}</div>
+                      <div className="text-xs text-slate-400 truncate">{teacher.email}</div>
                     </div>
                   </div>
                 ) : (
@@ -189,71 +232,80 @@ export default function AdminClassDetail() {
                 )}
               </div>
               <div>
-                <div className="text-xs text-slate-400 mb-1">Room Assignment</div>
-                <div className="font-medium text-white">Room {Math.floor(Math.random() * 20) + 1}</div>
-              </div>
-              <div>
                 <div className="text-xs text-slate-400 mb-1">Schedule</div>
-                <div className="font-medium text-white">Mon - Fri, 8:00 AM - 2:00 PM</div>
+                <div className="font-medium text-white">Mon – Fri, 8:00 AM – 2:00 PM</div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column - Student List */}
+        {/* Right Column - Student Roster */}
         <div className="xl:col-span-2">
           <Card className="bg-slate-900/50 border-slate-800">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 min-w-0">
                 <CardTitle className="text-lg text-white">Student Roster</CardTitle>
                 <CardDescription className="text-slate-400">
                   {students.length} students enrolled in {cls.className}
                 </CardDescription>
               </div>
-              <div className="relative w-64">
+              <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input 
-                  placeholder="Search students..." 
+                <Input
+                  placeholder="Search students..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-slate-800/50 border-slate-700"
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-slate-800/50 border-slate-700 w-full"
                 />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border border-slate-800 overflow-hidden">
+              <div className="rounded-md border border-slate-800 overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-slate-800/50">
                     <TableRow className="border-slate-800 hover:bg-transparent">
                       <TableHead className="w-16">Roll No</TableHead>
                       <TableHead>Student</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                      <TableHead className="hidden md:table-cell">Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredStudents.length > 0 ? (
-                      filteredStudents.map((student) => (
-                        <TableRow key={student.id} className="border-slate-800/50 hover:bg-slate-800/30">
+                      filteredStudents.map(student => (
+                        <TableRow
+                          key={student.id}
+                          className="border-slate-800/50 hover:bg-slate-800/30"
+                        >
                           <TableCell className="font-medium text-slate-300">
                             {student.rollNo}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <Avatar className="w-8 h-8">
+                              <Avatar className="w-8 h-8 shrink-0">
                                 <AvatarFallback className="bg-purple-900/50 text-purple-200 text-xs">
                                   {getInitials(student.userName)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="font-medium text-white">{student.userName}</div>
+                              <div className="min-w-0">
+                                <div className="font-medium text-white truncate">
+                                  {student.userName}
+                                </div>
+                                <div className="text-xs text-slate-400 truncate sm:hidden">
+                                  {student.email}
+                                </div>
+                              </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-400">
+                          <TableCell className="text-sm text-slate-400 hidden sm:table-cell">
                             {student.email}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
+                          <TableCell className="hidden md:table-cell">
+                            <Badge
+                              variant="outline"
+                              className="bg-green-500/10 text-green-400 border-green-500/20"
+                            >
                               Active
                             </Badge>
                           </TableCell>
@@ -265,14 +317,21 @@ export default function AdminClassDetail() {
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800">
+                              <DropdownMenuContent
+                                align="end"
+                                className="bg-slate-900 border-slate-800"
+                              >
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => navigate(`/admin/students/${student.id}`)}>
+                                <DropdownMenuItem
+                                  onClick={() => navigate(`/admin/students/${student.id}`)}
+                                >
                                   View Profile
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>View Attendance</DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-slate-800" />
-                                <DropdownMenuItem className="text-red-400">Remove from Class</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-400">
+                                  Remove from Class
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -292,6 +351,27 @@ export default function AdminClassDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Add Student Modal */}
+      <AddStudentModal
+        open={showAddStudent}
+        onOpenChange={setShowAddStudent}
+        classId={id ?? ''}
+        className={cls.className}
+        onSuccess={handleStudentAdded}
+      />
+
+      {/* Edit Class Modal */}
+      <AddUserModal
+        title="Edit Class"
+        description="Update the class name or assigned teacher."
+        fields={editClassFields}
+        initialValues={{ className: cls.className, teacherId: cls.teacherId || '' }}
+        open={showEditClass}
+        onOpenChange={setShowEditClass}
+        onSubmit={handleEditClass}
+        submitLabel="Save Changes"
+      />
     </div>
   );
 }

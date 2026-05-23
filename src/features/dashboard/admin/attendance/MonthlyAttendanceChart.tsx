@@ -14,7 +14,7 @@ interface MonthlyAttendanceChartProps {
 
 export const MonthlyAttendanceChart: React.FC<MonthlyAttendanceChartProps> = ({ data }) => {
     return (
-        <Card>
+        <Card className="h-full">
             <CardHeader>
                 <CardTitle>Monthly Attendance</CardTitle>
                 <CardDescription>Present vs Absent per grade this month</CardDescription>

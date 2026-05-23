@@ -44,6 +44,17 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Secondary app — creates new Auth users without replacing the current session.
+const secondaryApp = initializeApp(firebaseConfig, 'user-creation');
+const secondaryAuth = getAuth(secondaryApp);
+
+export async function createAuthUser(email: string, password: string): Promise<string> {
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+  const uid = credential.user.uid;
+  await signOut(secondaryAuth);
+  return uid;
+}
+
 // Auth functions
 export async function login(email: string, password: string) {
   return signInWithEmailAndPassword(auth, email, password);

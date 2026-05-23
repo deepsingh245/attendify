@@ -58,7 +58,7 @@ const LoginPage: React.FC = () => {
     const creds: Record<string, { email: string; password: string }> = {
       admin: { email: "guestadmin@arovation.ar", password: "guest@,123" },
       teacher: { email: "guestteacher@attendify.ar", password: "guest@,123" },
-      student: { email: "gueststudent@attendify.com", password: "guest@,123" },
+      student: { email: "fahad.ali@student.attendify.school", password: "guest@,123" },
       guest: { email: "guest@attendify.ar", password: "guest@,123" },
     };
 

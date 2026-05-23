@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Student } from '@/firebase/interfaces/user.interface';
 import { updateStudent } from '@/firebase/studentUtils';
-import { uploadFileToFirebaseStorage } from '@/firebase/firebaseStorageUtils';
+import { uploadFileToFirebaseStorage, StoragePaths } from '@/firebase/firebaseStorageUtils';
 
 interface EditStudentModalProps {
   children?: React.ReactNode;
@@ -76,7 +76,7 @@ export function EditStudentModal({ children, student, onSuccess }: EditStudentMo
       let finalProfilePicUrl = formData.profilePictureUrl;
 
       if (profileImage) {
-        const result = await uploadFileToFirebaseStorage(profileImage, `students/${student.id}/profile.jpg`);
+        const result = await uploadFileToFirebaseStorage(profileImage, StoragePaths.studentProfile(student.id));
         finalProfilePicUrl = result.url;
       }
 

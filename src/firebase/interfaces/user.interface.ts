@@ -46,6 +46,7 @@ export interface Student {
     id: string;
     userName: string;
     email: string;
+    phone?: string;
     createdAt: string;
     updatedAt: string;
     role: 'student';

@@ -9,7 +9,7 @@ import { Teacher, Student, Admin } from '@/firebase/interfaces/user.interface'
 import { Upload, MapPin, Phone, Mail, Edit2, Save, X } from 'lucide-react'
 import { dangerToast, getCachedUser } from '@/lib/utils'
 import { updateTeacherProfile } from '@/firebase/teachersUtils'
-import { uploadFileWithFunction } from '@/firebase/firebaseFunctionUtils';
+import { uploadFileToFirebaseStorage, StoragePaths } from '@/firebase/firebaseStorageUtils';
 import GlobalLoader from '@/components/ui/global-loader'
 type CurrentUser = Teacher | Student | Admin | null
 
@@ -89,16 +89,16 @@ const handleSave = async () => {
     // 1. Upload profile image if provided
     if (formData.profilePictureUrl instanceof File) {
       try {
-        const uploadResult = await uploadFileWithFunction(formData.profilePictureUrl);
+        const role = currentUser.role;
+        const storagePath =
+          role === 'teacher' ? StoragePaths.teacherProfile(currentUser.id) :
+          role === 'admin'   ? StoragePaths.adminProfile(currentUser.id) :
+                               StoragePaths.studentProfile(currentUser.id);
 
-        if (!uploadResult || !uploadResult.url) {
-          dangerToast("Failed to upload profile picture via function.");
-          return;
-        }
-
+        const uploadResult = await uploadFileToFirebaseStorage(formData.profilePictureUrl, storagePath);
         updatedData.profilePictureUrl = uploadResult.url;
       } catch (err) {
-        console.error("Error uploading profile picture via function:", err);
+        console.error("Error uploading profile picture:", err);
         dangerToast("Error uploading profile picture. Please try again.");
         return;
       }
