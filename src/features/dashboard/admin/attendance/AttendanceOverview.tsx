@@ -150,8 +150,8 @@ const AttendanceOverview = () => {
             {/* Page Header */}
             <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Attendance Overview</h1>
-                    <p className="text-sm text-slate-400 mt-1">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Attendance Overview</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
                         Tracking all {stats.totalStudents} students across {stats.totalClasses} classes · Academic Year 2025–26
                     </p>
                 </div>

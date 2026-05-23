@@ -105,7 +105,7 @@ export default function AdminClassDetail() {
   };
 
   if (loading) return <GlobalLoader show={true} />;
-  if (!cls) return <div className="p-6 text-center text-slate-400">Class not found.</div>;
+  if (!cls) return <div className="p-6 text-center text-muted-foreground">Class not found.</div>;
 
   const filteredStudents = students.filter(s => {
     if (!searchQuery) return true;
@@ -144,13 +144,13 @@ export default function AdminClassDetail() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-white flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex flex-wrap items-center gap-2">
               <span className="truncate">{cls.className}</span>
-              <Badge variant="secondary" className="text-xs bg-slate-800 shrink-0">
+              <Badge variant="secondary" className="text-xs bg-muted shrink-0">
                 {cls.id}
               </Badge>
             </h1>
-            <p className="text-sm text-slate-400 mt-1">Academic Year 2025–26</p>
+            <p className="text-sm text-muted-foreground mt-1">Academic Year 2025–26</p>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:shrink-0">
@@ -201,28 +201,28 @@ export default function AdminClassDetail() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column - Details */}
         <div className="xl:col-span-1 space-y-6">
-          <Card className="bg-slate-900/50 border-slate-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-lg text-white">Class Details</CardTitle>
+              <CardTitle className="text-lg text-foreground">Class Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <div className="text-xs text-slate-400 mb-1">Class Name</div>
-                <div className="font-medium text-white">{cls.className}</div>
+                <div className="text-xs text-muted-foreground mb-1">Class Name</div>
+                <div className="font-medium text-foreground">{cls.className}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-400 mb-1">Teacher</div>
+                <div className="text-xs text-muted-foreground mb-1">Teacher</div>
                 {teacher ? (
                   <div
-                    className="flex items-center gap-3 mt-2 p-3 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-3 mt-2 p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
                     onClick={() => navigate(`/admin/teachers/${teacher.id}`)}
                   >
-                    <Avatar className="w-10 h-10 border border-slate-700">
+                    <Avatar className="w-10 h-10 border border-border">
                       <AvatarFallback>{getInitials(teacher.userName)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <div className="font-medium text-white truncate">{teacher.userName}</div>
-                      <div className="text-xs text-slate-400 truncate">{teacher.email}</div>
+                      <div className="font-medium text-foreground truncate">{teacher.userName}</div>
+                      <div className="text-xs text-muted-foreground truncate">{teacher.email}</div>
                     </div>
                   </div>
                 ) : (
@@ -232,8 +232,8 @@ export default function AdminClassDetail() {
                 )}
               </div>
               <div>
-                <div className="text-xs text-slate-400 mb-1">Schedule</div>
-                <div className="font-medium text-white">Mon – Fri, 8:00 AM – 2:00 PM</div>
+                <div className="text-xs text-muted-foreground mb-1">Schedule</div>
+                <div className="font-medium text-foreground">Mon – Fri, 8:00 AM – 2:00 PM</div>
               </div>
             </CardContent>
           </Card>
@@ -241,29 +241,29 @@ export default function AdminClassDetail() {
 
         {/* Right Column - Student Roster */}
         <div className="xl:col-span-2">
-          <Card className="bg-slate-900/50 border-slate-800">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg text-white">Student Roster</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardTitle className="text-lg text-foreground">Student Roster</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   {students.length} students enrolled in {cls.className}
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search students..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-slate-800/50 border-slate-700 w-full"
+                  className="pl-9 bg-muted/50 border-border w-full"
                 />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border border-slate-800 overflow-x-auto">
+              <div className="rounded-md border border-border overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-slate-800/50">
-                    <TableRow className="border-slate-800 hover:bg-transparent">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="border-border hover:bg-transparent">
                       <TableHead className="w-16">Roll No</TableHead>
                       <TableHead>Student</TableHead>
                       <TableHead className="hidden sm:table-cell">Contact</TableHead>
@@ -276,9 +276,9 @@ export default function AdminClassDetail() {
                       filteredStudents.map(student => (
                         <TableRow
                           key={student.id}
-                          className="border-slate-800/50 hover:bg-slate-800/30"
+                          className="border-border/50 hover:bg-muted/30"
                         >
-                          <TableCell className="font-medium text-slate-300">
+                          <TableCell className="font-medium text-foreground/80">
                             {student.rollNo}
                           </TableCell>
                           <TableCell>
@@ -289,16 +289,16 @@ export default function AdminClassDetail() {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                <div className="font-medium text-white truncate">
+                                <div className="font-medium text-foreground truncate">
                                   {student.userName}
                                 </div>
-                                <div className="text-xs text-slate-400 truncate sm:hidden">
+                                <div className="text-xs text-muted-foreground truncate sm:hidden">
                                   {student.email}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-400 hidden sm:table-cell">
+                          <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">
                             {student.email}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
@@ -319,7 +319,7 @@ export default function AdminClassDetail() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent
                                 align="end"
-                                className="bg-slate-900 border-slate-800"
+                                className="bg-card border-border"
                               >
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem
@@ -328,7 +328,7 @@ export default function AdminClassDetail() {
                                   View Profile
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>View Attendance</DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-slate-800" />
+                                <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem className="text-red-400">
                                   Remove from Class
                                 </DropdownMenuItem>
@@ -339,7 +339,7 @@ export default function AdminClassDetail() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-32 text-center text-slate-400">
+                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                           No students found.
                         </TableCell>
                       </TableRow>

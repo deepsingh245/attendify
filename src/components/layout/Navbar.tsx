@@ -9,11 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { logout } from "@/firebase/firebaseUtils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
 import { getCachedUser, getCachedUserRole } from "@/lib/utils";
-// useState intentionally omitted for now
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -28,21 +28,23 @@ const NavBar = () => {
   const handleBackNavigation = () => {
     navigate(-1);
   };
- 
+
   const cachedUser = getCachedUser();
   const role = getCachedUserRole();
-  const initials = cachedUser?.displayName?.charAt(0).toUpperCase() || 'A';
-  const logoutHandler = () => { 
+  const initials = cachedUser?.userName?.charAt(0).toUpperCase() || cachedUser?.displayName?.charAt(0).toUpperCase() || 'A';
+
+  const logoutHandler = () => {
     logout();
-    console.log("Logout clicked");
-  }
+  };
+
   const handleProfileClick = () => {
     if (role === 'admin') navigate('/admin/profile')
     else if (role === 'teacher') navigate('/teacher/profile')
     else if (role === 'student') navigate('/student/profile')
-  }
+  };
+
   return (
-    <div className="w-full px-2 sm:px-4 py-2 light:bg-white border-b light:border-gray-200 flex items-center justify-between gap-2 sm:gap-4 k:bg-gray-900 dark:border-gray-700">
+    <div className="w-full px-2 sm:px-4 py-2 bg-background border-b border-border flex items-center justify-between gap-2 sm:gap-4">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <Button variant="outline" size="icon" onClick={() => toggleSidebar()} className="h-8 w-8 sm:h-10 sm:w-10 md:hidden">
           <Menu className="h-4 w-4" />
@@ -52,28 +54,38 @@ const NavBar = () => {
             <ArrowLeftIcon className="h-4 w-4" />
           </Button>
         )}
-         <div className="hidden sm:block"><Breadcrumps /></div>
+        <div className="hidden sm:block"><Breadcrumps /></div>
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-1 sm:gap-3">
-      {/* Hide search on mobile */}
-      {/* <div className="hidden md:block">
-        <SearchBar button={false} />
-      </div> */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        {/* Theme toggle */}
+        <ThemeToggle />
+
+        {/* Notifications */}
         <DropdownMenu>
-           <DropdownMenuTrigger>
-            <div className="p-2 rounded-md hover:bg-gray-100"><Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" /></div>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem>No Notifications</DropdownMenuItem>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-muted-foreground">No notifications</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-sm font-medium">{initials}</div>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full p-0">
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                {initials}
+              </div>
+            </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
+          <DropdownMenuContent align="end">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleProfileClick}>Profile</DropdownMenuItem>

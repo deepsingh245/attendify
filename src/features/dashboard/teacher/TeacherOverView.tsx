@@ -227,10 +227,10 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="font-semibold text-white">
+                <p className="font-semibold text-foreground">
                   {upcomingClass.className}
                 </p>
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-muted-foreground">
                   Priority: Get attendance ready + share assignment
                 </p>
               </CardContent>
@@ -362,28 +362,28 @@ const markAsCompleted = (e: React.MouseEvent<HTMLDivElement>, classId: string) =
               {days.map((day) => (
                 <div
                   key={day}
-                  className="bg-slate-900/60 border border-slate-800 rounded-lg p-3"
+                  className="bg-muted/50 border border-border rounded-lg p-3"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="text-sm font-semibold">{day}</h3>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted-foreground">
                       {(timetableByDay[day] ?? []).length} slot(s)
                     </span>
                   </div>
                   {((timetableByDay[day] ?? []) as TimeSlot[]).length === 0 ? (
-                    <p className="text-xs text-slate-500">No class scheduled</p>
+                    <p className="text-xs text-muted-foreground">No class scheduled</p>
                   ) : (
                     <ul className="space-y-2">
                       {(timetableByDay[day] ?? []).map((slot, slotIdx) => (
                         <li
                           key={`${day}-${slotIdx}`}
-                          className="border border-slate-800 rounded-md p-2 bg-slate-950/30"
+                          className="border border-border rounded-md p-2 bg-background/50"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs text-slate-300 font-semibold">
+                            <p className="text-xs text-foreground/80 font-semibold">
                               {slot.className}
                             </p>
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-muted-foreground">
                               {slot.startTime} - {slot.endTime}
                             </span>
                           </div>

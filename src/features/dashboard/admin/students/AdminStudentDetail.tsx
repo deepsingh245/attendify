@@ -99,7 +99,7 @@ export default function AdminStudentDetail() {
   ];
 
   if (loading) return <GlobalLoader show={true} />;
-  if (!student) return <div className="p-6 text-center text-slate-400">Student not found.</div>;
+  if (!student) return <div className="p-6 text-center text-muted-foreground">Student not found.</div>;
 
   const totalClasses = attendance.length;
   const presentClasses = attendance.filter(a => a.status === 'Present' || a.status === 'Late').length;
@@ -128,13 +128,13 @@ export default function AdminStudentDetail() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
               Student Profile
-              <Badge variant="secondary" className="text-xs bg-slate-800">
+              <Badge variant="secondary" className="text-xs bg-muted">
                 {student.id}
               </Badge>
             </h1>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Academic Year 2025–26
             </p>
           </div>
@@ -191,32 +191,32 @@ export default function AdminStudentDetail() {
       {/* Main Content Layout */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Column - Details */}
-        <Card className="flex-shrink-0 w-full sm:w-80 bg-slate-900/50">
+        <Card className="flex-shrink-0 w-full sm:w-80 bg-card/50">
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center">
-              <Avatar className="w-24 h-24 text-3xl mb-4 border-4 border-slate-700">
+              <Avatar className="w-24 h-24 text-3xl mb-4 border-4 border-border">
                 <AvatarImage src={student.profilePictureUrl} alt={student.userName} />
                 <AvatarFallback>{getInitials(student.userName)}</AvatarFallback>
               </Avatar>
-              <h2 className="text-2xl font-bold text-white">{student.userName}</h2>
+              <h2 className="text-2xl font-bold text-foreground">{student.userName}</h2>
             </div>
 
             <div className="space-y-4 mt-6 text-sm">
               <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-slate-400" />
-                <span className="text-slate-300 truncate" title={student.email}>{student.email}</span>
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground/80 truncate" title={student.email}>{student.email}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Hash className="w-4 h-4 text-slate-400" />
-                <span className="text-slate-300">{student.rollNo}</span>
+                <Hash className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground/80">{student.rollNo}</span>
               </div>
               <div className="flex items-center gap-3">
-                <School className="w-4 h-4 text-slate-400" />
-                <span className="text-slate-300">{student.classId || "Not Assigned"}</span>
+                <School className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground/80">{student.classId || "Not Assigned"}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-slate-400" />
-                <span className="text-slate-300">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground/80">
                   Joined {student.createdAt ? new Date(student.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "Unknown"}
                 </span>
               </div>
@@ -255,7 +255,7 @@ export default function AdminStudentDetail() {
                   />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-40 text-slate-500">
+                <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
                   <Calendar className="w-10 h-10 mb-3 opacity-20" />
                   <p>No attendance records for {selectedMonth}</p>
                 </div>

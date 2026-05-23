@@ -242,7 +242,7 @@ const ClassDetail = () => {
               ? 'text-red-500'
               : row.attendanceToday === 'Leave'
               ? 'text-amber-500'
-              : 'text-gray-500'
+              : 'text-muted-foreground'
           }`}
         >
           {row.attendanceToday}
@@ -332,7 +332,7 @@ const ClassDetail = () => {
               <CardHeader className="flex-row flex items-center justify-between px-0 pt-0">
                 <div className="flex flex-col">
                   <h3 className="text-lg font-semibold">Manual Attendance</h3>
-                  <p className="text-sm text-gray-500">Mark attendance manually</p>
+                  <p className="text-sm text-muted-foreground">Mark attendance manually</p>
                 </div>
               </CardHeader>
               <GenericTable
@@ -360,7 +360,7 @@ const ClassDetail = () => {
                 <CardHeader className="w-full flex justify-between items-start">
                   <div className="flex flex-col">
                     <h3 className="text-lg font-semibold">Upload Classroom Image</h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Upload a photo of the class. AI will detect and mark attendance
                     </p>
                   </div>
@@ -368,7 +368,7 @@ const ClassDetail = () => {
                     Detect Faces
                   </Button>
                 </CardHeader>
-                <div className="relative w-full h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                <div className="relative w-full h-[400px] border-2 border-dashed border-border rounded-lg flex items-center justify-center">
                   <FaceRecognition
                     ref={faceRecognitionRef}
                     studentsList={studentsInClass.map(s => ({ id: s.id, name: s.userName || 'Unknown' }))}
@@ -381,15 +381,15 @@ const ClassDetail = () => {
             <div className="md:col-span-1 flex flex-col gap-4">
               <Card className="p-4 flex-1">
                 <h3 className="text-lg font-semibold mb-2">Detection Results</h3>
-                <p className="text-sm text-gray-500 mb-4">Review and confirm</p>
+                <p className="text-sm text-muted-foreground mb-4">Review and confirm</p>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <Card className="p-3 text-center">
                     <div className="text-2xl font-bold text-green-500">{detectedFacesCount}</div>
-                    <div className="text-sm text-gray-500">Detected</div>
+                    <div className="text-sm text-muted-foreground">Detected</div>
                   </Card>
                   <Card className="p-3 text-center">
                     <div className="text-2xl font-bold text-red-500">{undetectedFacesCount}</div>
-                    <div className="text-sm text-gray-500">Undetected</div>
+                    <div className="text-sm text-muted-foreground">Undetected</div>
                   </Card>
                 </div>
                 <Button
@@ -411,8 +411,8 @@ const ClassDetail = () => {
 
               <Card className="p-4 flex-1">
                 <h3 className="text-lg font-semibold mb-2">Detection Preview</h3>
-                <div className="relative w-full h-[200px] border border-gray-300 rounded-lg flex items-center justify-center">
-                  <div className="text-gray-500">No image uploaded yet</div>
+                <div className="relative w-full h-[200px] border border-border rounded-lg flex items-center justify-center">
+                  <div className="text-muted-foreground">No image uploaded yet</div>
                 </div>
               </Card>
             </div>
