@@ -62,6 +62,7 @@ export interface Student {
     // Attendance system–specific
     rollNo: number;
     classId: string;
+    faceImages?: string[];       // extra face photos for improved recognition
 
     [key: string]: any;
 }

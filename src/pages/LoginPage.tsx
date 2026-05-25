@@ -57,7 +57,7 @@ const LoginPage: React.FC = () => {
     const creds: Record<string, { email: string; password: string }> = {
       admin: { email: "guestadmin@arovation.ar", password: "guest@,123" },
       teacher: { email: "guestteacher@attendify.ar", password: "guest@,123" },
-      student: { email: "fahad.ali@student.attendify.school", password: "guest@,123" },
+      student: { email: "simrandeep.dev@gmail.com", password: "guest@,123" },
       guest: { email: "guest@attendify.ar", password: "guest@,123" },
     };
 
@@ -69,7 +69,6 @@ const LoginPage: React.FC = () => {
         if (!user) {
           setShowUserNotFoundDialog(true);
         }
-        console.log("🚀 ~ guestLogin ~ role:", role);
         window.dispatchEvent(new Event('attendifyRoleChanged'));
         // AppRoutes will automatically redirect when currentUser is set
       });

@@ -1,18 +1,20 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState, useMemo } from 'react';
-import { getStudentById } from '@/firebase/studentUtils';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { getStudentById, updateStudent } from '@/firebase/studentUtils';
 import { getAllAttendanceForStudent } from '@/firebase/AttendanceUtils';
 import { Student, AttendanceRecord } from '@/firebase/interfaces/user.interface';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import GenericTable from '@/components/shared/GenericTable';
 import { ChartBar } from '@/components/charts/BarChart';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Mail, Hash, School, Calendar, CheckCircle, XCircle, ArrowLeft, BarChart2 } from 'lucide-react';
+import { Mail, Hash, School, Calendar, CheckCircle, XCircle, ArrowLeft, BarChart2, Camera, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import GlobalLoader from '@/components/ui/global-loader';
 import StatCard from '@/components/shared/StatCard';
 import { EditStudentModal } from './EditStudentModal';
+import { uploadFileToFirebaseStorage, StoragePaths } from '@/firebase/firebaseStorageUtils';
+import { successToast, dangerToast } from '@/lib/utils';
 
 export default function AdminStudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +24,8 @@ export default function AdminStudentDetail() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('Jan');
   const [loading, setLoading] = useState(true);
+  const [faceUploading, setFaceUploading] = useState(false);
+  const faceInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -108,6 +112,33 @@ export default function AdminStudentDetail() {
   const getInitials = (name?: string) => {
     if (!name) return 'ST';
     return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleFaceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !student) return;
+    setFaceUploading(true);
+    try {
+      const path = StoragePaths.studentFace(student.id, Date.now());
+      const { url } = await uploadFileToFirebaseStorage(file, path);
+      const existing = student.faceImages ?? [];
+      await updateStudent(student.id, { faceImages: [...existing, url] });
+      setStudent(prev => prev ? { ...prev, faceImages: [...(prev.faceImages ?? []), url] } : prev);
+      successToast('Face photo added.');
+    } catch {
+      dangerToast('Failed to upload photo.');
+    } finally {
+      setFaceUploading(false);
+      if (faceInputRef.current) faceInputRef.current.value = '';
+    }
+  };
+
+  const handleFaceDelete = async (urlToRemove: string) => {
+    if (!student) return;
+    const updated = (student.faceImages ?? []).filter(u => u !== urlToRemove);
+    await updateStudent(student.id, { faceImages: updated });
+    setStudent(prev => prev ? { ...prev, faceImages: updated } : prev);
+    successToast('Face photo removed.');
   };
 
   const filteredAttendance = attendance.filter((r) => {
@@ -226,6 +257,63 @@ export default function AdminStudentDetail() {
 
         {/* Right Column - Charts and Tables */}
         <div className="flex-1 space-y-6">
+          {/* Face Photos */}
+          <Card className="bg-card border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-base text-foreground flex items-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  Face Recognition Photos
+                </CardTitle>
+                <CardDescription>
+                  Add multiple photos to improve recognition accuracy.
+                  {student.faceImages && student.faceImages.length > 0
+                    ? ` ${student.faceImages.length} extra photo${student.faceImages.length !== 1 ? 's' : ''} saved.`
+                    : ' Only profile photo is used currently.'}
+                </CardDescription>
+              </div>
+              <div>
+                <input
+                  ref={faceInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFaceUpload}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => faceInputRef.current?.click()}
+                  disabled={faceUploading}
+                  className="flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {faceUploading ? 'Uploading…' : 'Add Photo'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(!student.faceImages || student.faceImages.length === 0) ? (
+                <p className="text-sm text-muted-foreground">No extra face photos yet. Add photos to improve recognition.</p>
+              ) : (
+                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
+                  {student.faceImages.map((url, i) => (
+                    <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-muted/30">
+                      <img src={url} alt={`Face ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => handleFaceDelete(url)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <ChartBar
             title={`Attendance Overview (${year})`}
             description="Monthly attendance performance. Click a bar to view records."

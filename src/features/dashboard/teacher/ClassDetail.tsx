@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState, useRef } from "react";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { AttendanceRecord, Class as ClassInterface, Student, Teacher } from "@/firebase/interfaces/user.interface";
 import GenericTable, { Column } from '@/components/shared/GenericTable';
 import { useParams, useBlocker } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, CheckCircle2, XCircle, Clock, ScanFace, BookCheck } from "lucide-react";
 import FaceRecognition, { FaceRecognitionRef } from "./faceDetection";
 import { getClassById, getTeacherById } from "@/firebase/teachersUtils";
@@ -354,43 +356,46 @@ const ClassDetail = () => {
           </>
         ) : (
           /* ── FACE RECOGNITION MODE ── */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <Card className="p-4 flex flex-col items-center justify-center min-h-[300px]">
-                <CardHeader className="w-full flex justify-between items-start">
-                  <div className="flex flex-col">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+            {/* Left — Upload + Image */}
+            <div className="lg:col-span-2">
+              <Card className="flex flex-col">
+                <CardHeader className="flex-row flex items-center justify-between pb-2 pt-4 px-4">
+                  <div>
                     <h3 className="text-lg font-semibold">Upload Classroom Image</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Upload a photo of the class. AI will detect and mark attendance
-                    </p>
+                    <p className="text-sm text-muted-foreground">AI detects faces and marks attendance</p>
                   </div>
-                  <Button onClick={() => faceRecognitionRef.current?.detectFaces()}>
+                  <Button size="sm" onClick={() => faceRecognitionRef.current?.detectFaces()}>
+                    <ScanFace className="w-4 h-4 mr-2" />
                     Detect Faces
                   </Button>
                 </CardHeader>
-                <div className="relative w-full h-[400px] border-2 border-dashed border-border rounded-lg flex items-center justify-center">
+                <CardContent className="p-4 pt-0">
                   <FaceRecognition
                     ref={faceRecognitionRef}
-                    studentsList={studentsInClass.map(s => ({ id: s.id, name: s.userName || 'Unknown' }))}
+                    studentsList={studentsInClass.map(s => ({ id: s.id, name: s.userName || 'Unknown', profilePictureUrl: s.profilePictureUrl }))}
                     onRecognize={onRecognize}
                   />
-                </div>
+                </CardContent>
               </Card>
             </div>
 
-            <div className="md:col-span-1 flex flex-col gap-4">
-              <Card className="p-4 flex-1">
-                <h3 className="text-lg font-semibold mb-2">Detection Results</h3>
-                <p className="text-sm text-muted-foreground mb-4">Review and confirm</p>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <Card className="p-3 text-center">
+            {/* Right — Results + Student list */}
+            <div className="lg:col-span-1 flex flex-col gap-4">
+
+              {/* Stats + Submit */}
+              <Card className="p-4">
+                <h3 className="text-base font-semibold mb-3">Detection Results</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="rounded-lg border border-border p-3 text-center">
                     <div className="text-2xl font-bold text-green-500">{detectedFacesCount}</div>
-                    <div className="text-sm text-muted-foreground">Detected</div>
-                  </Card>
-                  <Card className="p-3 text-center">
+                    <div className="text-xs text-muted-foreground mt-0.5">Recognised</div>
+                  </div>
+                  <div className="rounded-lg border border-border p-3 text-center">
                     <div className="text-2xl font-bold text-red-500">{undetectedFacesCount}</div>
-                    <div className="text-sm text-muted-foreground">Undetected</div>
-                  </Card>
+                    <div className="text-xs text-muted-foreground mt-0.5">Unknown</div>
+                  </div>
                 </div>
                 <Button
                   className="w-full"
@@ -405,14 +410,50 @@ const ClassDetail = () => {
                     markAttendanceForMultipleStudents(toMark);
                   }}
                 >
-                  Confirm &amp; Submit Attendance
+                  {saving ? <Spinner /> : `Confirm & Submit (${recognizedStudentIds.length})`}
                 </Button>
               </Card>
 
-              <Card className="p-4 flex-1">
-                <h3 className="text-lg font-semibold mb-2">Detection Preview</h3>
-                <div className="relative w-full h-[200px] border border-border rounded-lg flex items-center justify-center">
-                  <div className="text-muted-foreground">No image uploaded yet</div>
+              {/* Recognised students list */}
+              <Card className="p-4 flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold">Recognised Students</h3>
+                  {recognizedStudentIds.length > 0 && (
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                      {recognizedStudentIds.length} present
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-2 max-h-[340px]">
+                  {recognizedStudentIds.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-24 text-muted-foreground">
+                      <ScanFace className="w-8 h-8 mb-2 opacity-30" />
+                      <p className="text-sm">Upload a photo to see results</p>
+                    </div>
+                  ) : (
+                    studentsInClass
+                      .filter(s => recognizedStudentIds.includes(s.id))
+                      .map(student => (
+                        <div
+                          key={student.id}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20"
+                        >
+                          <Avatar className="w-8 h-8 shrink-0">
+                            <AvatarImage src={student.profilePictureUrl} alt={student.userName} />
+                            <AvatarFallback className="bg-green-900/40 text-green-300 text-xs">
+                              {student.userName?.substring(0, 2).toUpperCase() ?? 'ST'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{student.userName}</p>
+                            <p className="text-xs text-muted-foreground">Roll #{student.rollNo}</p>
+                          </div>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 text-xs shrink-0">
+                            Present
+                          </Badge>
+                        </div>
+                      ))
+                  )}
                 </div>
               </Card>
             </div>

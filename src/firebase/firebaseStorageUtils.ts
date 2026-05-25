@@ -16,6 +16,7 @@ const storage = getStorage(firebaseStorageApp);
 // Path helpers — all files live under attendify/{category}/{id}/
 export const StoragePaths = {
   studentProfile: (id: string) => `attendify/students/${id}/profile.jpg`,
+  studentFace:    (id: string, ts: number) => `attendify/students/${id}/faces/face_${ts}.jpg`,
   teacherProfile: (id: string) => `attendify/teachers/${id}/profile.jpg`,
   adminProfile:   (id: string) => `attendify/admin/${id}/profile.jpg`,
   other:          (path: string) => `attendify/others/${path}`,

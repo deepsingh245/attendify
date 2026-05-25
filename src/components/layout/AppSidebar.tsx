@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { User, Shield, GraduationCap, Ticket, User2Icon } from "lucide-react";
+import { User, Shield, GraduationCap, Ticket, User2Icon, LayoutDashboard, CalendarCheck, Clock, BookOpen, History } from "lucide-react";
 import { getCachedUser } from "@/lib/utils";
 
 export function AppSidebar({ ...props }) {
@@ -63,8 +63,11 @@ export function AppSidebar({ ...props }) {
     ];
   } else if (role === 'student') {
     menuRoutes = [
-      { path: '/student', label: 'Overview', icon: User },
-      { path: '/student/classes', label: 'My Classes', icon: GraduationCap },
+      { path: '/student', label: 'Overview', icon: LayoutDashboard },
+      { path: '/student/attendance', label: 'Attendance', icon: CalendarCheck },
+      { path: '/student/timetable', label: 'Timetable', icon: Clock },
+      { path: '/student/classes', label: 'My Classes', icon: BookOpen },
+      { path: '/student/attendance-history', label: 'History', icon: History },
       { path: '/student/profile', label: 'Profile', icon: User },
     ];
   } else {

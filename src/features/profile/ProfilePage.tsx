@@ -64,7 +64,6 @@ const ProfilePage = () => {
 
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    console.log("🚀 ~ handleProfilePictureChange ~ file:", file)
     if (file) {
       const reader = new FileReader()
       reader.onload = () => {
@@ -107,7 +106,7 @@ const handleSave = async () => {
     // 2. Update teacher profile only if upload succeeded
     await updateTeacherProfile(currentUser.id, updatedData as Partial<Teacher>);
 
-    console.log("Saving profile:", updatedData);
+    // console.log("Saving profile:", updatedData);
     setIsEditing(false);
 
   } catch (err) {

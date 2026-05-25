@@ -163,7 +163,6 @@ const TeacherOverView = () => {
 
     return upcoming.length ? upcoming[0] : null
   }, [timetableByDay, activeDay, now])
-  console.log("🚀 ~ TeacherOverView ~ upcomingClass:", upcomingClass)
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 

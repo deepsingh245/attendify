@@ -8,6 +8,10 @@ import AdminTeacherDetail from "@/features/dashboard/admin/teachers/AdminTeacher
 import AdminClassDetail from "@/features/dashboard/admin/classes/AdminClassDetail";
 import AdminStudentDetail from "@/features/dashboard/admin/students/AdminStudentDetail";
 import StudentOverview from "@/features/dashboard/student/StudentOverview";
+import StudentAttendance from "@/features/dashboard/student/StudentAttendance";
+import StudentTimetable from "@/features/dashboard/student/StudentTimetable";
+import StudentClasses from "@/features/dashboard/student/StudentClasses";
+import StudentAttendanceHistory from "@/features/dashboard/student/StudentAttendanceHistory";
 import LoginPage from "@/pages/LoginPage";
 import SignUp from "@/pages/SignUp";
 import TeacherOverView from "@/features/dashboard/teacher/TeacherOverView";
@@ -163,7 +167,10 @@ useEffect(() => {
           }
         >
           <Route path="/student" element={<StudentOverview />} />
-          <Route path="/student/classes" element={<StudentOverview />} />
+          <Route path="/student/attendance" element={<StudentAttendance />} />
+          <Route path="/student/timetable" element={<StudentTimetable />} />
+          <Route path="/student/classes" element={<StudentClasses />} />
+          <Route path="/student/attendance-history" element={<StudentAttendanceHistory />} />
           <Route path="/student/profile" element={<ProfilePage />} />
         </Route>
 
