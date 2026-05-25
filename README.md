@@ -1,238 +1,152 @@
-# 📚 Attendify - Smart Attendance Management System
+# Attendify — Smart Attendance Management System
 
-A comprehensive, enterprise-grade attendance management system built with **React**, **TypeScript**, **Firebase**, and **Face Recognition** technology. Attendify streamlines attendance tracking with three distinct user roles: Admin, Teacher, and Student.
-
----
-
-## 🎯 Features
-
-- ✅ **Multi-role Authentication** (Admin, Teacher, Student)
-- ✅ **Face Recognition** using Face-API.js for automated attendance
-- ✅ **Real-time Attendance Tracking** with Firestore
-- ✅ **Student Management** - Create, update, and manage student records
-- ✅ **Teacher Dashboard** - Mark attendance and manage classes
-- ✅ **Admin Dashboard** - Overview of all students, teachers, and attendance
-- ✅ **Class Management** - Organize students into classes
-- ✅ **Responsive UI** - Mobile-friendly design with Tailwind CSS
-- ✅ **Attendance Statistics** - Present, Absent, Leave tracking
+A comprehensive attendance management system built with **React**, **TypeScript**, **Firebase**, and **face recognition** (face-api.js). Three distinct user roles — Admin, Teacher, and Student — each with a full dashboard.
 
 ---
 
-## 📊 System Architecture
+## Features
 
-```mermaid
-graph TB
-    User["👤 User"]
-    AuthModule["🔐 Authentication Module"]
-    Admin["👨‍💼 Admin"]
-    Teacher["👨‍🏫 Teacher"]
-    Student["👨‍🎓 Student"]
-    
-    User -->|Login/Signup| AuthModule
-    AuthModule -->|Role Check| Admin
-    AuthModule -->|Role Check| Teacher
-    AuthModule -->|Role Check| Student
-    
-    Admin -->|Manage Users| AdminDashboard["📊 Admin Dashboard"]
-    Teacher -->|Mark Attendance| TeacherDashboard["📋 Teacher Dashboard"]
-    Student -->|View Records| StudentDashboard["📈 Student Dashboard"]
-    
-    AdminDashboard -->|CRUD Operations| Firebase["🔥 Firebase"]
-    TeacherDashboard -->|Update Attendance| Firebase
-    StudentDashboard -->|Read Data| Firebase
+- **Multi-role authentication** — Admin, Teacher, Student (email/password via Firebase Auth)
+- **Face recognition attendance** — upload a class photo, faces are detected and matched to students automatically
+- **Multi-image training** — store multiple face photos per student for higher recognition accuracy
+- **Real-time Firestore** — all attendance records sync instantly
+- **Full student portal** — overview, attendance chart, timetable, class cards, history table, profile
+- **Admin dashboard** — manage students, teachers, classes; view system-wide analytics
+- **Teacher dashboard** — mark attendance manually or via face recognition; per-class stats
+- **Light / dark / system theme** — persisted across sessions
+- **Responsive UI** — Tailwind CSS with shadcn/ui
+
+---
+
+## System Architecture
+
+```
+Firebase Auth (attendify-3)  ←→  Firestore (attendify-3)  ←→  Firebase Storage (core-sfh)
+        ↑                                 ↑                              ↑
+   Login / session              Students, teachers,               Profile pictures
+   resolution                  classes, attendance                + face photos
 ```
 
 ---
 
-## 🔐 Authentication Flow
+## User Roles
 
-```mermaid
-graph LR
-    A["Login Page"] -->|Email & Password| B["Firebase Auth"]
-    B -->|User Verified| C["Fetch User Role"]
-    C -->|Admin| D["Admin Dashboard"]
-    C -->|Teacher| E["Teacher Dashboard"]
-    C -->|Student| F["Student Dashboard"]
-    B -->|Auth Failed| G["Error Message"]
-    G -->|Retry| A
-    
-    H["Sign Up"] -->|Create Account| B
-```
+### Admin
+- View system-wide attendance overview and charts
+- Manage students (create, edit, view attendance history)
+- Manage teachers and class assignments
+- Add multiple face recognition photos per student
+- Manage support tickets
 
----
+### Teacher
+- Overview of assigned classes with attendance stats
+- Mark attendance: manual or via face recognition (photo upload)
+- View per-class and per-student attendance history
 
-## 👥 User Roles & Permissions
-
-### 1. **Admin** 👨‍💼
-- Full system access
-- Manage all students, teachers, and classes
-- View system-wide attendance reports
-- Create and update class records
-- Monitor all user activities
-
-### 2. **Teacher** 👨‍🏫
-- Mark attendance for assigned classes
-- Manage assigned student records
-- View class-specific attendance reports
-- Upload face recognition data
-- Track attendance history
-
-### 3. **Student** 👨‍🎓
-- View personal attendance records
-- Check attendance statistics
-- View class information
-- Access personal profile
+### Student
+- **Overview** — attendance rate, days present/absent, recent records, class info
+- **Attendance** — monthly stat cards + 6-month bar chart + day-by-day list
+- **Timetable** — weekly schedule derived from class assignment
+- **My Classes** — per-class attendance rate with colour-coded progress rings
+- **History** — paginated table of all records, filterable by month and status
+- **Profile** — update personal details and profile photo
 
 ---
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 src/
-├── firebase/                    # Firebase integration
-│   ├── firebaseUtils.ts        # Core Firebase operations
-│   ├── studentUtils.ts         # Student CRUD operations
-│   ├── teachersUtils.ts        # Teacher CRUD operations
-│   ├── adminUtils.ts           # Admin CRUD operations
-│   ├── AttendanceUtils.ts      # Attendance management
-│   └── interfaces/
-│       └── user.interface.ts   # Data models
+├── App.tsx                          # Root: BrowserRouter + ThemeProvider + Toaster
+├── appRoutes.tsx                    # All routes + auth resolution (onAuthStateChanged)
+│
+├── firebase/
+│   ├── firebaseUtils.ts             # Core Firestore CRUD + batch + query builder
+│   ├── firebaseStorageUtils.ts      # Firebase Storage upload/get/delete (separate app)
+│   ├── studentUtils.ts              # Student CRUD
+│   ├── teachersUtils.ts             # Teacher + class CRUD
+│   ├── adminUtils.ts                # Admin + class CRUD
+│   ├── AttendanceUtils.ts           # Attendance read/write (single + bulk)
+│   └── interfaces/user.interface.ts # All TypeScript interfaces
+│
 ├── services/
-│   └── face-api.service.ts     # Face recognition service
+│   └── face-api.service.ts          # Face recognition: load models, descriptors, match
+│
 ├── components/
-│   ├── layout/                 # Layout components
-│   ├── modals/                 # Modal dialogs
-│   ├── forms/                  # Form components
-│   └── charts/                 # Chart components
+│   ├── layout/                      # AppLayout, AppSidebar, Navbar
+│   ├── shared/                      # StatCard, GenericTable, DropdownButton
+│   ├── charts/                      # BarChart, AreaChart (Recharts wrappers)
+│   ├── modals/                      # AddUserModal, SelectAttendanceMethodModal
+│   └── ui/                          # shadcn/ui primitives
+│
 ├── features/
-│   ├── auth/                   # Authentication feature
-│   ├── dashboard/              # Dashboard layouts
-│   └── profile/                # Profile management
-├── pages/                      # Route pages
-├── constants/                  # App constants
-└── types/                      # TypeScript types
+│   ├── dashboard/admin/             # AdminOverview, teachers, classes, students, tickets
+│   ├── dashboard/teacher/           # TeacherOverView, ClassDetail, faceDetection
+│   └── dashboard/student/           # StudentOverview, StudentAttendance, StudentTimetable,
+│                                    # StudentClasses, StudentAttendanceHistory, StudentList
+│
+└── pages/                           # LoginPage, SignUp, NotFoundPage
 ```
 
 ---
 
-## 🔧 Core Services & Utilities
+## Routes
 
-### 1. **Firebase Utils** (`firebaseUtils.ts`)
-Core Firestore operations for database interactions.
+```
+/login                      → LoginPage          (public)
+/signup                     → SignUp             (public)
+/                           → RoleBasedHome (redirects by role)
 
-```typescript
-// Authentication
-export async function login(email: string, password: string)
-export async function signup(email: string, password: string)
-export async function logout()
-export async function resetPassword(email: string)
+/admin                      → AdminOverview      (admin only)
+/admin/teachers             → TeachersList
+/admin/teachers/:id         → AdminTeacherDetail
+/admin/classes              → ClassList
+/admin/classes/:id          → AdminClassDetail
+/admin/students             → StudentList
+/admin/students/:id         → AdminStudentDetail
+/admin/tickets              → TicketsList
+/admin/profile              → ProfilePage
 
-// Firestore CRUD
-export const addDocument<T>(collectionName: string, data: T)
-export const getDocument(collectionName: string, docId: string)
-export const updateDocument<T>(collectionName: string, docId: string, data: T)
-export const deleteDocument(collectionName: string, docId: string)
-export const getCollection(collectionName: string)
+/teacher                    → TeacherOverView    (teacher only)
+/teacher/class/:id          → TeacherClassOverview
+/teacher/class/:id/attendance → ClassDetail (face recognition)
+/teacher/profile            → ProfilePage
 
-// Advanced Queries
-export async function queryCollection(collectionName: string, field: string, value: FieldValue, op: WhereFilterOp)
-export const buildQuery(collectionName: string, filters: [], order?: {}, limitCount?: number)
+/student                    → StudentOverview    (student only)
+/student/attendance         → StudentAttendance
+/student/timetable          → StudentTimetable
+/student/classes            → StudentClasses
+/student/attendance-history → StudentAttendanceHistory
+/student/profile            → ProfilePage
 ```
 
 ---
 
-### 2. **Student Utils** (`studentUtils.ts`)
+## Data Models
 
-```typescript
-// Get Operations
-export const getStudentById(studentId: string): Promise<Student | null>
-export const getAllStudents(): Promise<Student[]>
-export const getStudentsInClass(classId: string): Promise<Student[]>
-
-// Create Operations
-export const addStudent(studentData: Partial<Student>): Promise<void>
-
-// Student Management
-export const safeGetDocumentData<T>(collectionName: string, docId: string)
-```
-
-**Data Structure:**
 ```typescript
 interface Student {
   id: string
   userName: string
   email: string
-  createdAt: string
-  updatedAt: string
   role: 'student'
-  classes: string[]           // Array of class IDs
-  classId: string             // Primary class ID
+  classes: string[]            // class IDs enrolled
+  classId: string              // primary class
   rollNo: number
   profilePictureUrl?: string
-  lastLogin?: string
+  faceImages?: string[]        // extra face photos for recognition
   isActive: boolean
-  settings?: { theme: 'light' | 'dark', notifications: boolean }
+  createdAt: string
+  updatedAt: string
 }
-```
 
----
-
-### 3. **Teacher Utils** (`teachersUtils.ts`)
-
-```typescript
-// Get Operations
-export const getTeacherById(teacherId: string): Promise<Teacher | null>
-export const getAllTeachers(): Promise<Teacher[]>
-export const getTeacherClasses(teacherId: string, classes: Teacher['classes']): Promise<Class[]>
-
-// Teacher Specific Operations
-export const updateTeacherClasses(teacherId: string, classIds: string[])
-```
-
-**Data Structure:**
-```typescript
 interface Teacher {
   id: string
   userName: string
   email: string
-  createdAt?: string
-  updatedAt?: string
   role: 'teacher'
-  classes: {
-    id: string
-    isAttendanceMarkedForToday: boolean
-    completed: boolean
-  }[]
   subject: string
-  profilePictureUrl?: string
-  lastLogin?: string
-  isActive: boolean
-}
-```
-
----
-
-### 4. **Admin Utils** (`adminUtils.ts`)
-
-```typescript
-// Get Operations
-export const getAdminById(adminId: string): Promise<Admin | null>
-export const getAllClasses(): Promise<Class[]>
-
-// Class Management
-export const getClassesByTeacher(teacherId: string): Promise<Class[]>
-export const createClass(classData: Partial<Class>): Promise<void>
-```
-
-**Data Structures:**
-```typescript
-interface Admin {
-  id: string
-  userName: string
-  email: string
-  createdAt: string
-  updatedAt: string
-  role: 'admin'
+  classes: { id: string; isAttendanceMarkedForToday: boolean; completed: boolean }[]
   profilePictureUrl?: string
   isActive: boolean
 }
@@ -243,281 +157,121 @@ interface Class {
   teacherId: string
   students: string[]
 }
-```
 
----
-
-### 5. **Attendance Utils** (`AttendanceUtils.ts`)
-
-```typescript
-// Get Attendance Records
-export const getAllAttendance(): Promise<AttendanceRecord[]>
-export const getAllAttendanceForStudent(studentId: string): Promise<AttendanceRecord[]>
-export const getAttendanceForClassOnDate(classId: string, date: number): Promise<AttendanceRecord[]>
-export const getAttendanceForStudentOnDate(studentId: string, date: string): Promise<AttendanceRecord[]>
-
-// Mark Attendance
-export const markAttendanceForStudent(studentId: string, date: string, status: 'Present' | 'Absent' | 'Leave')
-export const markBulkAttendance(attendanceRecords: AttendanceRecord[]): Promise<void>
-```
-
-**Data Structure:**
-```typescript
 interface AttendanceRecord {
   studentId: string
-  date: string                // Format: "2025-10-27"
-  status: 'Present' | 'Absent' | 'Leave'
   classId: string
+  date: string                 // "YYYY-MM-DD"
+  status: 'Present' | 'Absent' | 'Leave' | 'Late'
 }
 ```
 
 ---
 
-## 🎯 Face Recognition Service
+## Face Recognition
 
-### Face API Service (`face-api.service.ts`)
+The system uses **face-api.js** (TensorFlow.js) with three pre-trained models stored in `/public/models/`:
+- **SSD MobileNetv1** — face detection
+- **Face Landmark 68** — facial feature points
+- **Face Recognition Net** — 128-dimension face descriptors for matching
 
-The face recognition module uses **face-api.js** (TensorFlow.js-based) for accurate face detection, landmark detection, and recognition.
+### Flow
 
-```typescript
-// Load pre-trained models
-export async function loadModels(modelPath = '/models')
+1. Teacher opens a class and selects "Take Attendance → Face Recognition"
+2. Teacher uploads a group classroom photo
+3. System loads models from `/public/models/`
+4. For each student with a photo, all available images (`profilePictureUrl` + `faceImages[]`) are fetched as same-origin blobs and processed into descriptors
+5. A `FaceMatcher` (threshold 0.55) is built from all descriptors
+6. All faces in the uploaded photo are detected and matched
+7. Matched students get colour-coded boxes (green ≥60%, amber 40–60%, red = unknown) with confidence %
+8. Confirmed matches are submitted as "Present" attendance records
 
-// Load student face descriptors
-export async function loadLabeledDescriptors(
-  students: { id: string, name: string }[],
-  bucketUrl: string
-): Promise<LabeledDescriptorMap>
+### Multi-Image Recognition
 
-// Create face matcher for recognition
-export function createFaceMatcher(descriptors: LabeledFaceDescriptors[], threshold: number)
+Adding extra face photos to a student (via Admin → Student Detail → Face Recognition Photos) improves accuracy. Each image yields an additional descriptor; face-api's `FaceMatcher` uses all descriptors for a label and picks the closest distance match.
 
-// Detect faces in image/video
-export async function detectFace(input: HTMLImageElement | HTMLVideoElement)
+### CORS Requirement
 
-// Get face descriptor for comparison
-export async function getFaceDescriptor(face: HTMLCanvasElement): Promise<Float32Array>
-```
-
-### Models Included:
-- **SSD MobileNetv1** - Fast face detection
-- **Face Landmark 68** - Facial feature detection
-- **Face Recognition Net** - Generate face descriptors for matching
-- **Tiny Face Detector** - Lightweight detection option
-- **Face Expression Model** - Emotion detection
-- **Age & Gender Model** - Demographics detection
-
-### Attendance Method - Face Recognition Flow
-
-```mermaid
-graph TD
-    A["Start Attendance"] -->|Enable Webcam| B["Stream Video"]
-    B -->|Detect Face| C["Face-API Detection"]
-    C -->|Extract Descriptor| D["Get Face Descriptor"]
-    D -->|Compare with DB| E["Face Matcher"]
-    E -->|Match Found| F["Identify Student"]
-    E -->|No Match| G["Face Not Recognized"]
-    F -->|Mark Attendance| H["Update Database"]
-    G -->|Retry| B
-    H -->|Save Record| I["Attendance Marked"]
+Firebase Storage must have CORS configured to allow `fetch()` from the browser:
+```json
+[{ "origin": ["*"], "method": ["GET"], "maxAgeSeconds": 3600 }]
 ```
 
 ---
 
-## 🔄 Complete Attendance Marking Workflow
+## Firebase Storage Paths
 
-```mermaid
-graph LR
-    A["Teacher Dashboard"] -->|Select Class| B["Get Class Students"]
-    B -->|Load Student Data| C["Load Face Models"]
-    C -->|Enable Webcam| D["Start Recognition"]
-    D -->|Detect Face| E["Extract Face Data"]
-    E -->|Match with DB| F["Identify Student"]
-    F -->|Auto Mark| G["Update Attendance"]
-    G -->|Sync Firebase| H["Save to Firestore"]
-    H -->|Refresh UI| I["Show Marked Status"]
+```
+attendify/students/{id}/profile.jpg          ← profile picture
+attendify/students/{id}/faces/face_{ts}.jpg  ← face recognition photos
+attendify/teachers/{id}/profile.jpg
+attendify/admin/{id}/profile.jpg
 ```
 
 ---
 
-## 🗄️ Firebase Collections
+## Environment Variables
 
-### Collections Structure:
+Create a `.env` file in the project root:
 
-```
-Firestore Database
-├── students/
-│   └── {studentId}
-│       ├── id: string
-│       ├── userName: string
-│       ├── email: string
-│       ├── classId: string
-│       ├── classes: string[]
-│       ├── rollNo: number
-│       └── ... (other fields)
-│
-├── teachers/
-│   └── {teacherId}
-│       ├── id: string
-│       ├── userName: string
-│       ├── email: string
-│       ├── classes: { id, isAttendanceMarkedForToday, completed }[]
-│       ├── subject: string
-│       └── ... (other fields)
-│
-├── classes/
-│   └── {classId}
-│       ├── id: string
-│       ├── className: string
-│       ├── teacherId: string
-│       └── students: string[]
-│
-├── attendance/
-│   └── {recordId}
-│       ├── studentId: string
-│       ├── classId: string
-│       ├── date: string (YYYY-MM-DD)
-│       └── status: 'Present' | 'Absent' | 'Leave'
-│
-└── admins/
-    └── {adminId}
-        ├── id: string
-        ├── userName: string
-        ├── email: string
-        └── ... (other fields)
+```env
+# Primary app — Auth + Firestore
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+
+# Secondary app — Firebase Storage (separate project for image storage)
+VITE_FIREBASE_CORE_API_KEY=
+VITE_FIREBASE_CORE_AUTH_DOMAIN=
+VITE_FIREBASE_CORE_PROJECT_ID=
+VITE_FIREBASE_CORE_BUCKET=
+VITE_FIREBASE_CORE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_CORE_APP_ID=
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### Prerequisites
-- Node.js (v16+)
-- npm or yarn
-- Firebase Project with Firestore enabled
-- Supabase account (for face recognition image storage)
-
-### Installation
-
-1. **Clone the repository**
 ```bash
+# 1. Clone
 git clone https://github.com/deepsingh245/Attendify.git
 cd Attendify
-```
 
-2. **Install dependencies**
-```bash
+# 2. Install dependencies
 npm install
-```
 
-3. **Configure environment variables**
-Create `.env.local`:
-```
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-```
+# 3. Create .env with your Firebase credentials (see above)
 
-4. **Start development server**
-```bash
+# 4. Start dev server
 npm run dev
-```
 
-5. **Build for production**
-```bash
+# 5. Production build
 npm run build
 ```
 
 ---
 
-## 📱 Usage Guide
+## Dev Commands
 
-### For Admins
-1. Login with admin credentials
-2. Navigate to Admin Dashboard
-3. Manage students, teachers, and classes
-4. View system-wide attendance reports
-5. Create new classes and assign teachers
-
-### For Teachers
-1. Login with teacher credentials
-2. Navigate to Teacher Dashboard
-3. Select a class to mark attendance
-4. Use face recognition to automatically mark attendance
-5. Manually update any records if needed
-6. View attendance statistics
-
-### For Students
-1. Login with student credentials
-2. View personal attendance records
-3. Check attendance statistics
-4. Update profile information
+```bash
+npm run dev       # Vite dev server
+npm run build     # Production build → /dist
+npm run preview   # Preview production build locally
+npm run lint      # ESLint
+```
 
 ---
 
-## 🎨 UI Components
+## Security
 
-- **GenericTable** - Reusable data table with pagination
-- **AddUserModal** - Modal for adding new users
-- **SelectAttendanceMethodModal** - Choose attendance method (manual/face recognition)
-- **StatCard** - Display statistics
-- **Charts** - Area and Bar charts for analytics
-- **DropdownButton** - Customizable dropdown menu
-
----
-
-## 🔒 Security
-
-- Firebase Authentication with email/password
-- Role-based access control (RBAC)
-- Secure Firestore rules (in production)
-- Password validation (minimum 6 characters)
-- Email validation before signup
-- Protected routes based on user roles
-
----
-
-## 📊 Performance Optimization
-
-- Lazy loading of models
-- Batch operations for attendance marking
-- Efficient queries with proper indexing
-- Responsive image optimization
-- Caching of face descriptors
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-## 🙋 Support & Contact
-
-For questions, issues, or suggestions, please open an issue on GitHub or contact the maintainers.
-
----
-
-## 📸 Screenshots
-
-<img src="https://github.com/deepsingh245/Attendify/assets/80377963/c22a12f3-8bdb-4326-b669-8f4e8578c422" alt="Dashboard Preview" width="600">
-
-<img src="https://github.com/deepsingh245/Attendify/assets/80377963/2c02b58d-71c9-4a91-b362-3956795e0fdf" alt="Face Recognition" width="600">
+- Firebase Auth email/password — no credentials stored client-side
+- Role-based route guards (`PrivateRoute` checks `user.role` vs `allowedRoles[]`)
+- Role persisted in `localStorage` — cleared on logout
+- Two isolated Firebase app instances — Auth/Firestore and Storage cannot cross-contaminate
 
 ---
 

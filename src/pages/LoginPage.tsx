@@ -15,7 +15,7 @@ import {
 import { login } from '@/firebase/firebaseUtils';
 import { getAuthErrorMessage, LOCAL_STORAGE_KEYS } from '@/constants/constants';
 import { dangerToast } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+
 
 
 type Role = 'admin' | 'teacher' | 'student' | 'guest' | null;
@@ -32,7 +32,6 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<Role>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     setIsVisible(true);
@@ -58,7 +57,7 @@ const LoginPage: React.FC = () => {
     const creds: Record<string, { email: string; password: string }> = {
       admin: { email: "guestadmin@arovation.ar", password: "guest@,123" },
       teacher: { email: "guestteacher@attendify.ar", password: "guest@,123" },
-      student: { email: "gueststudent@attendify.com", password: "guest@,123" },
+      student: { email: "simrandeep.dev@gmail.com", password: "guest@,123" },
       guest: { email: "guest@attendify.ar", password: "guest@,123" },
     };
 
@@ -70,7 +69,6 @@ const LoginPage: React.FC = () => {
         if (!user) {
           setShowUserNotFoundDialog(true);
         }
-        console.log("🚀 ~ guestLogin ~ role:", role);
         window.dispatchEvent(new Event('attendifyRoleChanged'));
         // AppRoutes will automatically redirect when currentUser is set
       });
@@ -103,7 +101,7 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors p-4">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-background transition-colors p-4">
       {/* Dynamic Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-400/20 dark:bg-blue-600/10 blur-[100px] animate-pulse" />

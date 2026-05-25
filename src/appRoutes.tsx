@@ -8,6 +8,10 @@ import AdminTeacherDetail from "@/features/dashboard/admin/teachers/AdminTeacher
 import AdminClassDetail from "@/features/dashboard/admin/classes/AdminClassDetail";
 import AdminStudentDetail from "@/features/dashboard/admin/students/AdminStudentDetail";
 import StudentOverview from "@/features/dashboard/student/StudentOverview";
+import StudentAttendance from "@/features/dashboard/student/StudentAttendance";
+import StudentTimetable from "@/features/dashboard/student/StudentTimetable";
+import StudentClasses from "@/features/dashboard/student/StudentClasses";
+import StudentAttendanceHistory from "@/features/dashboard/student/StudentAttendanceHistory";
 import LoginPage from "@/pages/LoginPage";
 import SignUp from "@/pages/SignUp";
 import TeacherOverView from "@/features/dashboard/teacher/TeacherOverView";
@@ -23,6 +27,7 @@ import TicketRoute from "./features/dashboard/admin/tickets/TicketRoute";
 import TicketsList from "./features/dashboard/admin/tickets/TicketsList";
 import ProfilePage from "./features/profile/ProfilePage";
 import ClassDetail from "./features/dashboard/teacher/ClassDetail";
+import TeacherClassOverview from "./features/dashboard/teacher/TeacherClassOverview";
 import GlobalLoader from "./components/ui/global-loader";
 import { LOCAL_STORAGE_KEYS } from "@/constants/constants";
 import { getCachedUserRole } from "@/lib/utils";
@@ -146,7 +151,8 @@ useEffect(() => {
           }
         >
           <Route path="/teacher" element={<TeacherOverView />} />
-          <Route path="/teacher/class/:id" element={<ClassDetail />} />
+          <Route path="/teacher/class/:id" element={<TeacherClassOverview />} />
+          <Route path="/teacher/class/:id/attendance" element={<ClassDetail />} />
           <Route path="/teacher/profile" element={<ProfilePage />} />
         </Route>
 
@@ -161,7 +167,10 @@ useEffect(() => {
           }
         >
           <Route path="/student" element={<StudentOverview />} />
-          <Route path="/student/classes" element={<StudentOverview />} />
+          <Route path="/student/attendance" element={<StudentAttendance />} />
+          <Route path="/student/timetable" element={<StudentTimetable />} />
+          <Route path="/student/classes" element={<StudentClasses />} />
+          <Route path="/student/attendance-history" element={<StudentAttendanceHistory />} />
           <Route path="/student/profile" element={<ProfilePage />} />
         </Route>
 

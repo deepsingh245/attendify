@@ -13,39 +13,39 @@ const firebaseStorageConfig = {
 const firebaseStorageApp = initializeApp(firebaseStorageConfig, 'storage-app');
 const storage = getStorage(firebaseStorageApp);
 
-export const uploadFileToFirebaseStorage = async (file: File, destinationPath: string) => {
-  try {
-    const storageRef = ref(storage, destinationPath);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+// Path helpers — all files live under attendify/{category}/{id}/
+export const StoragePaths = {
+  studentProfile: (id: string) => `attendify/students/${id}/profile.jpg`,
+  studentFace:    (id: string, ts: number) => `attendify/students/${id}/faces/face_${ts}.jpg`,
+  teacherProfile: (id: string) => `attendify/teachers/${id}/profile.jpg`,
+  adminProfile:   (id: string) => `attendify/admin/${id}/profile.jpg`,
+  other:          (path: string) => `attendify/others/${path}`,
+};
 
-    return new Promise<{ url: string; path: string }>((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        () => {
-          // Optionally track progress here
-        },
-        (error) => {
-          console.error('Error uploading file to Firebase Storage:', error);
-          reject(error);
-        },
-        async () => {
-          const url = await getDownloadURL(storageRef);
-          resolve({ url, path: destinationPath });
-        }
-      );
-    });
-  } catch (err) {
-    console.error('Unhandled error in uploadFileToFirebaseStorage:', err);
-    throw err;
-  }
+export const uploadFileToFirebaseStorage = async (file: File, destinationPath: string) => {
+  const storageRef = ref(storage, destinationPath);
+  const uploadTask = uploadBytesResumable(storageRef, file);
+
+  return new Promise<{ url: string; path: string }>((resolve, reject) => {
+    uploadTask.on(
+      'state_changed',
+      () => {},
+      (error) => {
+        console.error('Storage upload error:', error);
+        reject(error);
+      },
+      async () => {
+        const url = await getDownloadURL(storageRef);
+        resolve({ url, path: destinationPath });
+      }
+    );
+  });
 };
 
 export const getStorageFileUrl = async (path: string) => {
-  const storageRef = ref(storage, path);
-  return getDownloadURL(storageRef);
+  return getDownloadURL(ref(storage, path));
 };
 
 export const deleteStorageFile = async (path: string) => {
-  const storageRef = ref(storage, path);
-  return deleteObject(storageRef);
+  return deleteObject(ref(storage, path));
 };

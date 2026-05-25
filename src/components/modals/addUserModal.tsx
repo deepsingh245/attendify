@@ -95,12 +95,14 @@ const   AddUserModal: React.FC<GenericFormModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {trigger ? (
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button variant="default">{title}</Button>
-        </DialogTrigger>
+      {open === undefined && (
+        trigger ? (
+          <DialogTrigger asChild>{trigger}</DialogTrigger>
+        ) : (
+          <DialogTrigger asChild>
+            <Button variant="default">{title}</Button>
+          </DialogTrigger>
+        )
       )}
 
       <DialogContent className="sm:max-w-[640px]">

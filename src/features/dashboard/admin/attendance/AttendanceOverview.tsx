@@ -150,8 +150,8 @@ const AttendanceOverview = () => {
             {/* Page Header */}
             <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Attendance Overview</h1>
-                    <p className="text-sm text-slate-400 mt-1">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Attendance Overview</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
                         Tracking all {stats.totalStudents} students across {stats.totalClasses} classes · Academic Year 2025–26
                     </p>
                 </div>
@@ -200,11 +200,11 @@ const AttendanceOverview = () => {
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-3">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+                <div className="lg:col-span-3 h-full">
                    <MonthlyAttendanceChart data={monthlyChartData} />
                 </div>
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 h-full">
                     <TodaySummaryCard data={todaySummaryData} teachersPresent={22} totalTeachers={stats.totalTeachers} />
                 </div>
             </div>

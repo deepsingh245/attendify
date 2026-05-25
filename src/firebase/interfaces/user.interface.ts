@@ -46,6 +46,7 @@ export interface Student {
     id: string;
     userName: string;
     email: string;
+    phone?: string;
     createdAt: string;
     updatedAt: string;
     role: 'student';
@@ -61,6 +62,7 @@ export interface Student {
     // Attendance system–specific
     rollNo: number;
     classId: string;
+    faceImages?: string[];       // extra face photos for improved recognition
 
     [key: string]: any;
 }
@@ -73,6 +75,7 @@ export interface Class {
     className: string;
     teacherId: string;
     students: string[];
+    subject?: string;        // mirrors the assigned teacher's subject
 }
 export interface Admin {
     id: string;

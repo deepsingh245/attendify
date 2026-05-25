@@ -18,7 +18,7 @@ export const TodaySummaryCard: React.FC<TodaySummaryCardProps> = ({ data, teache
     const presentData = data.find(d => d.name === 'Present') || { value: 0 };
     
     return (
-        <Card>
+        <Card className="h-full">
             <CardHeader>
                 <CardTitle>Today's Summary</CardTitle>
                 <CardDescription>Real-time attendance split</CardDescription>

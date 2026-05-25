@@ -4,7 +4,7 @@ import { AppSidebar } from './AppSidebar';
 import NavBar from './Navbar';
 const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">

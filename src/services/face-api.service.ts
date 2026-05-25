@@ -1,7 +1,6 @@
 import * as faceapi from 'face-api.js';
 
 export async function loadModels(modelPath = '/models') {
-  // loads the common nets used in this app
   await Promise.all([
     faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath),
     faceapi.nets.faceLandmark68Net.loadFromUri(modelPath),
@@ -11,47 +10,78 @@ export async function loadModels(modelPath = '/models') {
 
 export type LabeledDescriptorMap = {
   descriptors: faceapi.LabeledFaceDescriptors[];
-  labelMap: Map<string, string>; // label -> id
+  labelMap: Map<string, string>; // name -> student id
+  loadedCount: number;
+  skippedNoPhoto: number;
+  skippedNoFaceDetected: number;
 };
 
+// Fetches the image as a blob and creates a same-origin object URL to avoid canvas CORS taint
+async function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching image`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(objectUrl); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image element failed to load')); };
+    img.src = objectUrl;
+  });
+}
+
 export async function loadLabeledDescriptors(
-  students: { id: string; name: string }[],
-  bucketUrl: string,
+  students: { id: string; name: string; profilePictureUrl?: string; faceImages?: string[] }[],
 ): Promise<LabeledDescriptorMap> {
-  const labeledFaces = students.map((student, i) => ({
-    label: student.userName,
-    url: `${bucketUrl}${student.id}/face${i + 1}.jpg`,
-    id: student.id,
-  }));
+  const studentsWithPhotos = students.filter(s => s.profilePictureUrl || (s.faceImages && s.faceImages.length > 0));
+  const skippedNoPhoto = students.length - studentsWithPhotos.length;
+  let skippedNoFaceDetected = 0;
 
-  const labelMap = new Map<string, string>(labeledFaces.map((f) => [f.label, f.id]));
+  const labelMap = new Map<string, string>(
+    studentsWithPhotos.map(s => [s.name, s.id])
+  );
 
-  const descriptors = await Promise.all(
-    labeledFaces.map(async (face) => {
+  const all = await Promise.all(
+    studentsWithPhotos.map(async (student) => {
       const descriptions: Float32Array[] = [];
-      try {
-        const img = await faceapi.fetchImage(face.url);
-        const detection = await faceapi
-          .detectSingleFace(img)
-          .withFaceLandmarks()
-          .withFaceDescriptor();
-        if (detection) descriptions.push(detection.descriptor);
-      } catch (err) {
-        // continue on error for this face
-        console.warn('face-api: error processing', face.label, err);
+      // Collect all available image URLs for this student
+      const imageUrls = [
+        student.profilePictureUrl,
+        ...(student.faceImages ?? []),
+      ].filter((u): u is string => Boolean(u));
+
+      for (const url of imageUrls) {
+        try {
+          const img = await loadImageFromUrl(url);
+          const detection = await faceapi
+            .detectSingleFace(img)
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+          if (detection) {
+            descriptions.push(detection.descriptor);
+          } else {
+            console.warn('face-api: no face detected in photo for', student.name, url);
+          }
+        } catch (err) {
+          console.warn('face-api: could not process photo for', student.name, err);
+        }
       }
-      return new faceapi.LabeledFaceDescriptors(face.label, descriptions);
+
+      if (descriptions.length === 0) skippedNoFaceDetected++;
+      return new faceapi.LabeledFaceDescriptors(student.name, descriptions);
     }),
   );
 
-  return { descriptors, labelMap };
+  const descriptors = all.filter(d => d.descriptors.length > 0);
+  return { descriptors, labelMap, loadedCount: descriptors.length, skippedNoPhoto, skippedNoFaceDetected };
 }
 
 export function createFaceMatcher(
-  labeledDescriptors: faceapi.LabeledFaceDescriptors[] | undefined,
-  distance = 0.6,
-) {
-  return new faceapi.FaceMatcher(labeledDescriptors || [], distance);
+  labeledDescriptors: faceapi.LabeledFaceDescriptors[],
+  distance = 0.55,
+): faceapi.FaceMatcher | null {
+  if (labeledDescriptors.length === 0) return null;
+  return new faceapi.FaceMatcher(labeledDescriptors, distance);
 }
 
 export async function detectAllFacesFromImage(imgEl: HTMLImageElement) {
