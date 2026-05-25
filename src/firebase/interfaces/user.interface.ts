@@ -75,6 +75,7 @@ export interface Class {
     className: string;
     teacherId: string;
     students: string[];
+    subject?: string;        // mirrors the assigned teacher's subject
 }
 export interface Admin {
     id: string;
